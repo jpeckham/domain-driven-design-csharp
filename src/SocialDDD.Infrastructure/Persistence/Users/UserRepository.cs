@@ -37,4 +37,13 @@ internal sealed class UserRepository(MongoDbContext context) : IUserRepository
         await context.Users
             .Find(u => u.Id == id)
             .AnyAsync(ct);
+
+    public async Task<User?> FindByHandleAsync(Handle handle, CancellationToken ct = default) =>
+        await context.Users.Find(u => u.Handle == handle).FirstOrDefaultAsync(ct);
+
+    public async Task<bool> HandleExistsAsync(Handle handle, CancellationToken ct = default) =>
+        await context.Users.Find(u => u.Handle == handle).AnyAsync(ct);
+
+    public Task UpdateAsync(User user, CancellationToken ct = default) =>
+        context.Users.ReplaceOneAsync(u => u.Id == user.Id, user, cancellationToken: ct);
 }

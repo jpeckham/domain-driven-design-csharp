@@ -16,8 +16,19 @@ public sealed class MongoDbContext
 
         var client = new MongoClient(options.Value.ConnectionString);
         _database = client.GetDatabase(options.Value.DatabaseName);
+
+        EnsureIndexes();
     }
 
     public IMongoCollection<User> Users => _database.GetCollection<User>("users");
     public IMongoCollection<Post> Posts => _database.GetCollection<Post>("posts");
+
+    private void EnsureIndexes()
+    {
+        var handleIndex = new CreateIndexModel<User>(
+            Builders<User>.IndexKeys.Ascending("handle"),
+            new CreateIndexOptions { Unique = true, Background = true, Name = "handle_unique" });
+
+        Users.Indexes.CreateOne(handleIndex);
+    }
 }
