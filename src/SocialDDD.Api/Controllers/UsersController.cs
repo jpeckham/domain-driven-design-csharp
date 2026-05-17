@@ -52,4 +52,37 @@ public sealed class UsersController(UserService userService) : ControllerBase
             return NotFound(new { error = ex.Message });
         }
     }
+
+    [HttpGet("by-handle/{handle}")]
+    public async Task<IActionResult> GetByHandle(string handle, CancellationToken ct)
+    {
+        try
+        {
+            var user = await userService.GetByHandleAsync(handle, ct);
+            return Ok(user);
+        }
+        catch (DomainException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpPut("me/display-name")]
+    public async Task<IActionResult> UpdateDisplayName([FromBody] UpdateDisplayNameRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim is null || !Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new { error = "Invalid token." });
+
+        try
+        {
+            await userService.UpdateDisplayNameAsync(userId, request, ct);
+            return NoContent();
+        }
+        catch (DomainException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+    }
 }
