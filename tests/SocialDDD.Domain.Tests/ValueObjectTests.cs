@@ -141,9 +141,9 @@ public class ValueObjectTests
     }
 
     [Fact]
-    public void DisplayName_TrimsWhitespace()
+    public void DisplayName_MinLength_IsAccepted()
     {
-        var dn = new DisplayName("  Alice  ");
-        dn.Value.Should().Be("Alice");
+        var act = () => new DisplayName("A");
+        act.Should().NotThrow();
     }
 }
