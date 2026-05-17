@@ -10,16 +10,20 @@ public sealed class AuthService(HttpClient http, IJSRuntime js)
     private const string UserIdKey = "user_id";
     private const string UsernameKey = "username";
 
-    public async Task<bool> RegisterAsync(string username, string email, string password, string handle, string displayName)
+    public async Task<string?> RegisterAsync(string username, string email, string password, string handle, string displayName)
     {
         var response = await http.PostAsJsonAsync("api/users/register", new { username, email, password, handle, displayName });
-        if (!response.IsSuccessStatusCode) return false;
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ErrorResult>();
+            return err?.Error ?? "Registration failed.";
+        }
 
         var result = await response.Content.ReadFromJsonAsync<TokenResult>();
-        if (result is null) return false;
+        if (result is null) return "Registration failed.";
 
         await StoreTokenAsync(result);
-        return true;
+        return null;
     }
 
     public async Task<bool> LoginAsync(string email, string password)
@@ -80,4 +84,5 @@ public sealed class AuthService(HttpClient http, IJSRuntime js)
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
     private sealed record TokenResult(string Token, Guid UserId, string Username);
+    private sealed record ErrorResult(string Error);
 }

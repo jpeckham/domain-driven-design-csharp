@@ -38,15 +38,22 @@
 
     private async Task HandleRegister()
     {
+        _error = Validate();
+        if (!string.IsNullOrEmpty(_error)) return;
+
         _busy = true;
-        _error = "";
-
-        var ok = await Auth.RegisterAsync(_handle, _email, _password, _handle, _displayName);
-        if (ok)
+        _error = await Auth.RegisterAsync(_handle, _email, _password, _handle, _displayName) ?? "";
+        if (string.IsNullOrEmpty(_error))
             Nav.NavigateTo("/feed");
-        else
-            _error = "Registration failed. Email or handle may already be taken.";
-
         _busy = false;
+    }
+
+    private string Validate()
+    {
+        if (string.IsNullOrWhiteSpace(_handle)) return "Handle is required.";
+        if (string.IsNullOrWhiteSpace(_displayName)) return "Display name is required.";
+        if (string.IsNullOrWhiteSpace(_email)) return "Email is required.";
+        if (string.IsNullOrWhiteSpace(_password)) return "Password is required.";
+        return "";
     }
 }
