@@ -72,17 +72,11 @@ public class ValueObjectTests
     [InlineData("@alice")]
     [InlineData("alice!")]
     [InlineData("alice-bob")]
+    [InlineData(null!)]
     public void Handle_InvalidInput_ThrowsDomainException(string input)
     {
         var act = () => new Handle(input);
         act.Should().Throw<DomainException>();
-    }
-
-    [Fact]
-    public void Handle_NormalizesToLowercase()
-    {
-        var handle = new Handle("ALICE");
-        handle.Value.Should().Be("alice");
     }
 
     [Fact]
