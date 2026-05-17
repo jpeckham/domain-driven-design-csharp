@@ -10,9 +10,9 @@ public sealed class AuthService(HttpClient http, IJSRuntime js)
     private const string UserIdKey = "user_id";
     private const string UsernameKey = "username";
 
-    public async Task<bool> RegisterAsync(string username, string email, string password)
+    public async Task<bool> RegisterAsync(string username, string email, string password, string handle, string displayName)
     {
-        var response = await http.PostAsJsonAsync("api/users/register", new { username, email, password });
+        var response = await http.PostAsJsonAsync("api/users/register", new { username, email, password, handle, displayName });
         if (!response.IsSuccessStatusCode) return false;
 
         var result = await response.Content.ReadFromJsonAsync<TokenResult>();
