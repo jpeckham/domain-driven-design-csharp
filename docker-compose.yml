@@ -1,0 +1,41 @@
+services:
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "7100:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Mongo__ConnectionString: mongodb://mongo:27017
+      Mongo__DatabaseName: socialddd
+      Jwt__Secret: dev-secret-change-in-production-must-be-32-chars-min
+      Jwt__Issuer: SocialDDD
+      Jwt__Audience: SocialDDD
+      Jwt__ExpiryMinutes: "60"
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    ports:
+      - "5200:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

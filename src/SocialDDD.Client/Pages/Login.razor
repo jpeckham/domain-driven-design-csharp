@@ -1,0 +1,42 @@
+@page "/login"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<h2>Login</h2>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <p style="color:red">@_error</p>
+}
+
+<div>
+    <label>Email</label>
+    <input type="email" @bind="_email" />
+</div>
+<div>
+    <label>Password</label>
+    <input type="password" @bind="_password" />
+</div>
+<button @onclick="HandleLogin" disabled="@_busy">Login</button>
+<a href="/register">Register instead</a>
+
+@code {
+    private string _email = "";
+    private string _password = "";
+    private string _error = "";
+    private bool _busy;
+
+    private async Task HandleLogin()
+    {
+        _busy = true;
+        _error = "";
+
+        var ok = await Auth.LoginAsync(_email, _password);
+        if (ok)
+            Nav.NavigateTo("/feed");
+        else
+            _error = "Invalid email or password.";
+
+        _busy = false;
+    }
+}

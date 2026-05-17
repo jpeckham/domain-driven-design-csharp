@@ -1,0 +1,6 @@
+@SocialDDD.Api_HostAddress = http://localhost:5296
+
+GET {{SocialDDD.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

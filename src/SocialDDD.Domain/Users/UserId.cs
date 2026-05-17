@@ -1,0 +1,7 @@
+namespace SocialDDD.Domain.Users;
+
+public sealed record UserId(Guid Value)
+{
+    public static UserId New() => new(Guid.NewGuid());
+    public static UserId From(Guid value) => new(value);
+}

@@ -1,0 +1,16 @@
+using SocialDDD.Domain.Exceptions;
+
+namespace SocialDDD.Domain.Users;
+
+public sealed record Email
+{
+    public string Value { get; }
+
+    public Email(string value)
+    {
+        var normalised = value?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (normalised.Length == 0 || normalised.Length > 320 || !normalised.Contains('@'))
+            throw new DomainException("Invalid email address.");
+        Value = normalised;
+    }
+}

@@ -1,0 +1,19 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy project files first so NuGet restore is cached as a separate layer
+COPY SocialDDD.sln .
+COPY src/SocialDDD.Domain/SocialDDD.Domain.csproj             src/SocialDDD.Domain/
+COPY src/SocialDDD.Application/SocialDDD.Application.csproj   src/SocialDDD.Application/
+COPY src/SocialDDD.Infrastructure/SocialDDD.Infrastructure.csproj src/SocialDDD.Infrastructure/
+COPY src/SocialDDD.Api/SocialDDD.Api.csproj                   src/SocialDDD.Api/
+RUN dotnet restore src/SocialDDD.Api/SocialDDD.Api.csproj
+
+COPY . .
+RUN dotnet publish src/SocialDDD.Api/SocialDDD.Api.csproj \
+      -c Release -o /app/publish --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "SocialDDD.Api.dll"]

@@ -1,0 +1,83 @@
+@page "/feed"
+@page "/"
+@inject PostApiService PostApi
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<h2>Feed</h2>
+
+@if (_username is not null)
+{
+    <p>Logged in as <strong>@_username</strong> | <button @onclick="Logout">Logout</button></p>
+
+    <div>
+        <textarea @bind="_newContent" rows="3" placeholder="What's on your mind? (max 280 chars)" maxlength="280"></textarea>
+        <br />
+        <button @onclick="CreatePost" disabled="@_busy">Post</button>
+    </div>
+    <hr />
+}
+else
+{
+    <p><a href="/login">Login</a> or <a href="/register">Register</a> to post.</p>
+}
+
+@if (_posts.Count == 0)
+{
+    <p>No posts yet.</p>
+}
+
+@foreach (var post in _posts)
+{
+    <div style="border:1px solid #ccc; padding:8px; margin:8px 0;">
+        <small>@post.PostedAt.ToLocalTime().ToString("g")</small>
+        <p>@post.Content</p>
+        @if (_currentUserId == post.AuthorId)
+        {
+            <button @onclick="() => DeletePost(post.PostId)">Delete</button>
+        }
+    </div>
+}
+
+@code {
+    private List<PostApiService.PostDto> _posts = [];
+    private Guid? _currentUserId;
+    private string? _username;
+    private string _newContent = "";
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        _currentUserId = await Auth.GetCurrentUserIdAsync();
+        _username = await Auth.GetCurrentUsernameAsync();
+        await LoadFeedAsync();
+    }
+
+    private async Task LoadFeedAsync() =>
+        _posts = await PostApi.GetFeedAsync();
+
+    private async Task CreatePost()
+    {
+        if (_currentUserId is null || string.IsNullOrWhiteSpace(_newContent)) return;
+
+        _busy = true;
+        await PostApi.CreateAsync(_currentUserId.Value, _newContent);
+        _newContent = "";
+        await LoadFeedAsync();
+        _busy = false;
+    }
+
+    private async Task DeletePost(Guid postId)
+    {
+        await PostApi.DeleteAsync(postId);
+        await LoadFeedAsync();
+    }
+
+    private async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        _currentUserId = null;
+        _username = null;
+    }
+}
