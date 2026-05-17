@@ -10,11 +10,7 @@
 }
 
 <div>
-    <label>Username</label>
-    <input @bind="_username" />
-</div>
-<div>
-    <label>Handle (e.g. alice - no @@ needed)</label>
+    <label>Handle (e.g. alice_123 — no @@ needed)</label>
     <input @bind="_handle" placeholder="alice_123" />
 </div>
 <div>
@@ -33,7 +29,6 @@
 <a href="/login">Already have an account?</a>
 
 @code {
-    private string _username = "";
     private string _handle = "";
     private string _displayName = "";
     private string _email = "";
@@ -46,11 +41,11 @@
         _busy = true;
         _error = "";
 
-        var ok = await Auth.RegisterAsync(_username, _email, _password, _handle, _displayName);
+        var ok = await Auth.RegisterAsync(_handle, _email, _password, _handle, _displayName);
         if (ok)
             Nav.NavigateTo("/feed");
         else
-            _error = "Registration failed. Username, email, or handle may already be taken.";
+            _error = "Registration failed. Email or handle may already be taken.";
 
         _busy = false;
     }
