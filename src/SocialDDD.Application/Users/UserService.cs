@@ -23,7 +23,7 @@ public sealed class UserService(
             throw new DomainException("Username is already taken.");
 
         var hash = passwordHasher.Hash(request.Password);
-        var user = User.Register(username, email, new PasswordHash(hash));
+        var user = User.Register(username, email, new PasswordHash(hash), new Handle(request.Username), new DisplayName(request.Username));
 
         await userRepository.AddAsync(user, ct);
         await eventDispatcher.DispatchAsync(user.PopDomainEvents(), ct);
