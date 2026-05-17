@@ -102,4 +102,48 @@ public class ValueObjectTests
         var act = () => new Handle(thirtyOneChars);
         act.Should().Throw<DomainException>();
     }
+
+    // DisplayName tests
+    [Theory]
+    [InlineData("Alice Smith")]
+    [InlineData("  Alice  ")]
+    [InlineData("A")]
+    public void DisplayName_ValidInput_CreatesDisplayName(string input)
+    {
+        var dn = new DisplayName(input);
+        dn.Value.Should().Be(input.Trim());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null!)]
+    public void DisplayName_Empty_ThrowsDomainException(string input)
+    {
+        var act = () => new DisplayName(input);
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void DisplayName_TooLong_ThrowsDomainException()
+    {
+        var fiftyOneChars = new string('a', 51);
+        var act = () => new DisplayName(fiftyOneChars);
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void DisplayName_MaxLength_IsAccepted()
+    {
+        var fiftyChars = new string('a', 50);
+        var act = () => new DisplayName(fiftyChars);
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void DisplayName_TrimsWhitespace()
+    {
+        var dn = new DisplayName("  Alice  ");
+        dn.Value.Should().Be("Alice");
+    }
 }
