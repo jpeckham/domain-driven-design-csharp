@@ -48,7 +48,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await Auth.InitializeAsync();
+        if (!await Auth.InitializeAsync())
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
         _currentUserId = await Auth.GetCurrentUserIdAsync();
         _username = await Auth.GetCurrentUsernameAsync();
         await LoadFeedAsync();

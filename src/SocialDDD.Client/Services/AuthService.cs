@@ -48,6 +48,13 @@ public sealed class AuthService(HttpClient http, IJSRuntime js)
         if (string.IsNullOrEmpty(token)) return false;
 
         SetAuthHeader(token);
+
+        var idStr = await js.InvokeAsync<string?>("localStorage.getItem", UserIdKey);
+        if (!Guid.TryParse(idStr, out var userId)) { await LogoutAsync(); return false; }
+
+        var response = await http.GetAsync($"api/users/{userId}");
+        if (!response.IsSuccessStatusCode) { await LogoutAsync(); return false; }
+
         return true;
     }
 
