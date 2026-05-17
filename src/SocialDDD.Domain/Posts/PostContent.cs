@@ -9,7 +9,7 @@ public sealed record PostContent
     public PostContent(string value)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Length > 280)
-            throw new DomainException("Post content must be 1–280 characters.");
+            throw new DomainValidationException("Post content must be 1–280 characters.");
         Value = value;
     }
 }

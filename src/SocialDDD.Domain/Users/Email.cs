@@ -10,7 +10,7 @@ public sealed record Email
     {
         var normalised = value?.Trim().ToLowerInvariant() ?? string.Empty;
         if (normalised.Length == 0 || normalised.Length > 320 || !normalised.Contains('@'))
-            throw new DomainException("Invalid email address.");
+            throw new DomainValidationException("Invalid email address.");
         Value = normalised;
     }
 }

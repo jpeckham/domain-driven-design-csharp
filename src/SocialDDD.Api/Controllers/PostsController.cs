@@ -20,10 +20,8 @@ public sealed class PostsController(PostService postService) : ControllerBase
             var post = await postService.CreateAsync(request, ct);
             return CreatedAtAction(nameof(GetFeed), new { }, post);
         }
-        catch (DomainException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
+        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainException ex) { return Conflict(new { error = ex.Message }); }
     }
 
     [Authorize]

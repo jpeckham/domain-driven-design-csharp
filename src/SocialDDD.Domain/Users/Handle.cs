@@ -14,10 +14,10 @@ public sealed partial record Handle
     public Handle(string value)
     {
         if (value is null)
-            throw new DomainException("Handle must be 1-30 characters: letters, digits, and underscores only.");
+            throw new DomainValidationException("Handle must be 1-30 characters: letters, digits, and underscores only.");
         var normalized = value.ToLowerInvariant();
         if (!ValidPattern().IsMatch(normalized))
-            throw new DomainException("Handle must be 1-30 characters: letters, digits, and underscores only.");
+            throw new DomainValidationException("Handle must be 1-30 characters: letters, digits, and underscores only.");
         Value = normalized;
     }
 }

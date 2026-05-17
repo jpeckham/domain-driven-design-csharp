@@ -18,10 +18,8 @@ public sealed class UsersController(UserService userService) : ControllerBase
             var response = await userService.RegisterAsync(request, ct);
             return CreatedAtAction(nameof(GetById), new { id = response.UserId }, response);
         }
-        catch (DomainException ex)
-        {
-            return Conflict(new { error = ex.Message });
-        }
+        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainException ex) { return Conflict(new { error = ex.Message }); }
     }
 
     [HttpPost("login")]
@@ -32,10 +30,8 @@ public sealed class UsersController(UserService userService) : ControllerBase
             var response = await userService.LoginAsync(request, ct);
             return Ok(response);
         }
-        catch (DomainException ex)
-        {
-            return Unauthorized(new { error = ex.Message });
-        }
+        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainException ex) { return Unauthorized(new { error = ex.Message }); }
     }
 
     [Authorize]
@@ -47,10 +43,7 @@ public sealed class UsersController(UserService userService) : ControllerBase
             var user = await userService.GetByIdAsync(id, ct);
             return Ok(user);
         }
-        catch (DomainException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        catch (DomainException ex) { return NotFound(new { error = ex.Message }); }
     }
 
     [HttpGet("by-handle/{handle}")]
@@ -61,10 +54,8 @@ public sealed class UsersController(UserService userService) : ControllerBase
             var user = await userService.GetByHandleAsync(handle, ct);
             return Ok(user);
         }
-        catch (DomainException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainException ex) { return NotFound(new { error = ex.Message }); }
     }
 
     [Authorize]
@@ -80,9 +71,7 @@ public sealed class UsersController(UserService userService) : ControllerBase
             await userService.UpdateDisplayNameAsync(userId, request, ct);
             return NoContent();
         }
-        catch (DomainException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainException ex) { return NotFound(new { error = ex.Message }); }
     }
 }
