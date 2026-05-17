@@ -24,6 +24,8 @@ internal static class BsonMappings
         BsonSerializer.RegisterSerializer(new EmailSerializer());
         BsonSerializer.RegisterSerializer(new PasswordHashSerializer());
         BsonSerializer.RegisterSerializer(new PostContentSerializer());
+        BsonSerializer.RegisterSerializer(new HandleSerializer());
+        BsonSerializer.RegisterSerializer(new DisplayNameSerializer());
 
         // AutoMap traverses base classes. When it processes User it first
         // registers Entity<UserId>, where Id IS the declaring type, so the
@@ -32,6 +34,8 @@ internal static class BsonMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
+            cm.MapMember(u => u.Handle).SetElementName("handle");
+            cm.MapMember(u => u.DisplayName).SetElementName("displayName");
         });
 
         BsonClassMap.RegisterClassMap<Post>(cm =>
@@ -95,5 +99,23 @@ internal sealed class PostContentSerializer : SerializerBase<PostContent>
         => new(ctx.Reader.ReadString());
 
     public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, PostContent value)
+        => ctx.Writer.WriteString(value.Value);
+}
+
+internal sealed class HandleSerializer : SerializerBase<Handle>
+{
+    public override Handle Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
+        => new(ctx.Reader.ReadString());
+
+    public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, Handle value)
+        => ctx.Writer.WriteString(value.Value);
+}
+
+internal sealed class DisplayNameSerializer : SerializerBase<DisplayName>
+{
+    public override DisplayName Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
+        => new(ctx.Reader.ReadString());
+
+    public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, DisplayName value)
         => ctx.Writer.WriteString(value.Value);
 }
