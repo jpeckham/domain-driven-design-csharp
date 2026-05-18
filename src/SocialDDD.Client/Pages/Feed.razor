@@ -4,40 +4,81 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 
-<h2>Feed</h2>
-
-@if (_username is not null)
-{
-    <p>Logged in as <strong>@_username</strong> | <button @onclick="Logout">Logout</button></p>
-
-    <div>
-        <textarea @bind="_newContent" rows="3" placeholder="What's on your mind? (max 280 chars)" maxlength="280"></textarea>
-        <br />
-        <button @onclick="CreatePost" disabled="@_busy">Post</button>
-    </div>
-    <hr />
-}
-else
-{
-    <p><a href="/login">Login</a> or <a href="/register">Register</a> to post.</p>
-}
-
-@if (_posts.Count == 0)
-{
-    <p>No posts yet.</p>
-}
-
-@foreach (var post in _posts)
-{
-    <div style="border:1px solid #ccc; padding:8px; margin:8px 0;">
-        <small>@post.PostedAt.ToLocalTime().ToString("g")</small>
-        <p>@post.Content</p>
-        @if (_currentUserId == post.AuthorId)
+<section class="workspace">
+    <header class="masthead">
+        <div>
+            <h1>Recent Posts</h1>
+            @if (_username is not null)
+            {
+                <p>Signed in as @_username</p>
+            }
+        </div>
+        @if (_username is not null)
         {
-            <button @onclick="() => DeletePost(post.PostId)">Delete</button>
+            <div class="actions">
+                <button type="button" class="secondary" @onclick="Logout">Log Out</button>
+            </div>
         }
+    </header>
+
+    <div class="feed-layout">
+        @if (_username is not null)
+        {
+            <section class="panel composer">
+                <div class="composer-header">
+                    <h2>Create Post</h2>
+                    <p>Post as @_username</p>
+                </div>
+                <form @onsubmit="CreatePost">
+                    <textarea @bind="_newContent" class="composer-input" placeholder="Share an update with your network." maxlength="280"></textarea>
+                    <div class="composer-submit-row">
+                        <span>@(_newContent.Length) / 280</span>
+                        <button type="submit" disabled="@_busy">Post</button>
+                    </div>
+                </form>
+            </section>
+        }
+        else
+        {
+            <section class="panel">
+                <p class="empty"><a href="/login">Log in</a> or <a href="/register">register</a> to post.</p>
+            </section>
+        }
+
+        <section class="feed">
+            <div class="feed-title-row">
+                <h2>Recent</h2>
+            </div>
+            @if (_posts.Count == 0)
+            {
+                <p class="empty">No posts yet.</p>
+            }
+            else
+            {
+                @foreach (var post in _posts)
+                {
+                    <article class="post">
+                        <div class="post-header">
+                            <div class="post-author-block">
+                                <div class="post-author-line">
+                                    <span>@post.AuthorId</span>
+                                    <span class="post-time">@post.PostedAt.ToLocalTime().ToString("g")</span>
+                                </div>
+                            </div>
+                            @if (_currentUserId == post.AuthorId)
+                            {
+                                <div class="actions">
+                                    <button type="button" class="secondary compact" @onclick="() => DeletePost(post.PostId)">Delete</button>
+                                </div>
+                            }
+                        </div>
+                        <p>@post.Content</p>
+                    </article>
+                }
+            }
+        </section>
     </div>
-}
+</section>
 
 @code {
     private List<PostApiService.PostDto> _posts = [];

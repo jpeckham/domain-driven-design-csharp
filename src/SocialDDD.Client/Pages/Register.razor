@@ -2,31 +2,27 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 
-<h2>Register</h2>
+<section class="auth">
+    <div class="auth-panel">
+        <h1>Create Account</h1>
+        <p>Use your account to post only as yourself.</p>
 
-@if (!string.IsNullOrEmpty(_error))
-{
-    <p style="color:red">@_error</p>
-}
+        <form @onsubmit="HandleRegister">
+            <input @bind="_displayName" placeholder="Display name" />
+            <input @bind="_handle" placeholder="handle (e.g. alice_123)" />
+            <input type="email" @bind="_email" placeholder="email@example.com" />
+            <input type="password" @bind="_password" placeholder="Password" />
+            <button type="submit" disabled="@_busy">Create Account</button>
+        </form>
 
-<div>
-    <label>Handle (e.g. alice_123 — no @@ needed)</label>
-    <input @bind="_handle" placeholder="alice_123" />
-</div>
-<div>
-    <label>Display Name</label>
-    <input @bind="_displayName" placeholder="Alice Smith" />
-</div>
-<div>
-    <label>Email</label>
-    <input type="email" @bind="_email" />
-</div>
-<div>
-    <label>Password</label>
-    <input type="password" @bind="_password" />
-</div>
-<button @onclick="HandleRegister" disabled="@_busy">Register</button>
-<a href="/login">Already have an account?</a>
+        <p class="switch">Already have an account? <a href="/login">Log in</a></p>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="field-message">@_error</p>
+        }
+    </div>
+</section>
 
 @code {
     private string _handle = "";

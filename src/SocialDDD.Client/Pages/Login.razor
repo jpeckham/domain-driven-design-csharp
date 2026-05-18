@@ -2,23 +2,25 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 
-<h2>Login</h2>
+<section class="auth">
+    <div class="auth-panel">
+        <h1>SocialDDD</h1>
+        <p>Log in to read recent posts and publish as yourself.</p>
 
-@if (!string.IsNullOrEmpty(_error))
-{
-    <p style="color:red">@_error</p>
-}
+        <form @onsubmit="HandleLogin">
+            <input type="email" @bind="_email" placeholder="email@example.com" />
+            <input type="password" @bind="_password" placeholder="Password" />
+            <button type="submit" disabled="@_busy">Log In</button>
+        </form>
 
-<div>
-    <label>Email</label>
-    <input type="email" @bind="_email" />
-</div>
-<div>
-    <label>Password</label>
-    <input type="password" @bind="_password" />
-</div>
-<button @onclick="HandleLogin" disabled="@_busy">Login</button>
-<a href="/register">Register instead</a>
+        <p class="switch">Need an account? <a href="/register">Create one</a></p>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="field-message">@_error</p>
+        }
+    </div>
+</section>
 
 @code {
     private string _email = "";
