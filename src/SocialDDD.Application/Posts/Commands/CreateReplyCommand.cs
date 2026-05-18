@@ -6,12 +6,17 @@ using SocialDDD.Domain.Users;
 
 namespace SocialDDD.Application.Posts.Commands;
 
-public sealed record CreateReplyCommand(Guid ParentPostId, Guid AuthorUserId, string Content);
+public sealed record CreateReplyCommand(
+    Guid ParentPostId,
+    Guid AuthorUserId,
+    string Content,
+    IReadOnlyList<Guid>? MediaAssetIds = null);
 
 public sealed class CreateReplyCommandHandler(
     IPostRepository postRepository,
     IUserRepository userRepository,
-    IDomainEventDispatcher eventDispatcher)
+    IDomainEventDispatcher eventDispatcher,
+    IPendingMediaStore pendingMediaStore)
 {
     public async Task<PostDto> HandleAsync(CreateReplyCommand command, CancellationToken ct = default)
     {
@@ -37,11 +42,27 @@ public sealed class CreateReplyCommandHandler(
                 content = prefix + content;
         }
 
+        var media = LoadAndValidateMedia(command.MediaAssetIds);
         var postContent = new PostContent(content);
-        var reply = Post.CreateReply(parentPostId, UserId.From(command.AuthorUserId), authorHandle, postContent);
+        var reply = Post.CreateReply(parentPostId, UserId.From(command.AuthorUserId), authorHandle, postContent, media);
 
         await postRepository.AddAsync(reply, ct);
         await eventDispatcher.DispatchAsync(reply.PopDomainEvents(), ct);
+
+        var mediaDtos = reply.Media.Count > 0
+            ? reply.Media
+                .OrderBy(m => m.SortOrder)
+                .Select(m => new PostMediaDto(
+                    m.AssetId,
+                    m.Kind.ToString(),
+                    m.AltText,
+                    m.Width,
+                    m.Height,
+                    m.DurationMs,
+                    $"/api/post-media/{m.AssetId}",
+                    m.SortOrder))
+                .ToList()
+            : null;
 
         return new PostDto(
             reply.Id.Value,
@@ -54,9 +75,34 @@ public sealed class CreateReplyCommandHandler(
             0,
             reply.Mentions.Select(h => h.Value).ToList(),
             reply.Hashtags.ToList(),
-            null,   // OriginalPostId — replies are not reposts
-            0,      // RepostCount
-            false,  // IsRepostedByMe
-            null);  // OriginalPost
+            null,
+            0,
+            false,
+            null,
+            mediaDtos);
+    }
+
+    private IReadOnlyList<PostMedia>? LoadAndValidateMedia(IReadOnlyList<Guid>? assetIds)
+    {
+        if (assetIds is null or { Count: 0 }) return null;
+
+        if (assetIds.Count > 4)
+            throw new DomainValidationException("A post may contain at most 4 media items.");
+
+        var result = new List<PostMedia>(assetIds.Count);
+        foreach (var id in assetIds)
+        {
+            if (!pendingMediaStore.TryGetCompleted(id, out var media))
+                throw new DomainException($"Media asset {id} not found or not yet uploaded.");
+            result.Add(media!);
+        }
+
+        var kinds = result.Select(m => m.Kind).Distinct().ToList();
+        if (kinds.Count > 1)
+            throw new DomainValidationException("All media items must be the same kind.");
+        if (kinds[0] == MediaKind.Video && result.Count > 1)
+            throw new DomainValidationException("A post may contain at most 1 video.");
+
+        return result;
     }
 }

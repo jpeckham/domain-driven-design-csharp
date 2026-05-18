@@ -9,7 +9,8 @@ namespace SocialDDD.Application.Posts;
 public sealed class PostService(
     IPostRepository postRepository,
     IUserRepository userRepository,
-    IDomainEventDispatcher eventDispatcher)
+    IDomainEventDispatcher eventDispatcher,
+    IPendingMediaStore pendingMediaStore)
 {
     public async Task<PostDto> CreateAsync(CreatePostRequest request, CancellationToken ct = default)
     {
@@ -18,7 +19,8 @@ public sealed class PostService(
         if (!await userRepository.ExistsByIdAsync(authorId, ct))
             throw new DomainException("Author not found.");
 
-        var post = Post.Create(authorId, new PostContent(request.Content));
+        var media = LoadAndValidateMedia(request.MediaAssetIds);
+        var post = Post.Create(authorId, new PostContent(request.Content), media);
 
         await postRepository.AddAsync(post, ct);
         await eventDispatcher.DispatchAsync(post.PopDomainEvents(), ct);
@@ -62,6 +64,30 @@ public sealed class PostService(
         return user?.Handle.Value;
     }
 
+    private IReadOnlyList<PostMedia>? LoadAndValidateMedia(IReadOnlyList<Guid>? assetIds)
+    {
+        if (assetIds is null or { Count: 0 }) return null;
+
+        if (assetIds.Count > 4)
+            throw new DomainValidationException("A post may contain at most 4 media items.");
+
+        var result = new List<PostMedia>(assetIds.Count);
+        foreach (var id in assetIds)
+        {
+            if (!pendingMediaStore.TryGetCompleted(id, out var media))
+                throw new DomainException($"Media asset {id} not found or not yet uploaded.");
+            result.Add(media!);
+        }
+
+        var kinds = result.Select(m => m.Kind).Distinct().ToList();
+        if (kinds.Count > 1)
+            throw new DomainValidationException("All media items must be the same kind.");
+        if (kinds[0] == MediaKind.Video && result.Count > 1)
+            throw new DomainValidationException("A post may contain at most 1 video.");
+
+        return result;
+    }
+
     private async Task<(Handle? handle, UserId? userId)> ResolveRequesterAsync(Guid? requesterId, CancellationToken ct)
     {
         if (requesterId is null) return (null, null);
@@ -87,6 +113,21 @@ public sealed class PostService(
                 originalPost = await ToDtoAsync(orig, requesterHandle, requesterUserId, ct);
         }
 
+        var mediaDtos = post.Media.Count > 0
+            ? post.Media
+                .OrderBy(m => m.SortOrder)
+                .Select(m => new PostMediaDto(
+                    m.AssetId,
+                    m.Kind.ToString(),
+                    m.AltText,
+                    m.Width,
+                    m.Height,
+                    m.DurationMs,
+                    $"/api/post-media/{m.AssetId}",
+                    m.SortOrder))
+                .ToList()
+            : null;
+
         return new PostDto(
             post.Id.Value,
             post.AuthorId.Value,
@@ -101,7 +142,8 @@ public sealed class PostService(
             post.OriginalPostId?.Value,
             repostCount,
             isRepostedByMe,
-            originalPost);
+            originalPost,
+            mediaDtos);
     }
 
     private async Task<IReadOnlyList<PostDto>> ToDtosAsync(
