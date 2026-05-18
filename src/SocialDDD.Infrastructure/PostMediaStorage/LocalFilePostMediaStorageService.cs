@@ -18,6 +18,7 @@ public sealed class LocalFilePostMediaStorageService(string baseDirectory) : IPo
         var path = FilePath(storageKey);
         await using var file = File.Create(path);
         await data.CopyToAsync(file, ct);
+        await File.WriteAllTextAsync(FilePath(storageKey + ".ct"), contentType, ct);
     }
 
     public Task<Stream> LoadAsync(string storageKey, CancellationToken ct)
@@ -27,6 +28,13 @@ public sealed class LocalFilePostMediaStorageService(string baseDirectory) : IPo
             throw new FileNotFoundException($"Post media not found: {storageKey}");
         Stream stream = File.OpenRead(path);
         return Task.FromResult(stream);
+    }
+
+    public Task<string?> GetContentTypeAsync(string storageKey, CancellationToken ct)
+    {
+        var path = FilePath(storageKey + ".ct");
+        if (!File.Exists(path)) return Task.FromResult<string?>(null);
+        return File.ReadAllTextAsync(path, ct)!;
     }
 
     public Task DeleteAsync(string storageKey, CancellationToken ct)

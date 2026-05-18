@@ -19,7 +19,7 @@ public sealed class CompletePostMediaUploadCommandHandler(IPendingMediaStore pen
         CompletePostMediaUploadCommand command, CancellationToken ct = default)
     {
         if (!pendingMediaStore.IsReserved(command.AssetId))
-            throw new DomainException(
+            throw new DomainValidationException(
                 $"Media asset {command.AssetId} was not reserved. Call the upload-sessions endpoint first.");
 
         var kind = command.ContentType.StartsWith("video/")

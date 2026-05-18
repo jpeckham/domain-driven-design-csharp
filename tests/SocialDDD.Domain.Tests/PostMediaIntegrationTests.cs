@@ -71,7 +71,7 @@ public class PostMediaIntegrationTests : IDisposable
         var act = async () => await completeHandler.HandleAsync(
             new CompletePostMediaUploadCommand(orphanId, "image/jpeg", 1024, null, null, null, null));
 
-        await act.Should().ThrowAsync<SocialDDD.Domain.Exceptions.DomainException>()
+        await act.Should().ThrowAsync<SocialDDD.Domain.Exceptions.DomainValidationException>()
             .WithMessage("*not reserved*");
     }
 

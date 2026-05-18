@@ -30,6 +30,7 @@ public sealed class PostMediaController(
         catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
     }
 
+    [Authorize]
     [HttpPut("api/media/uploads/post/{assetId:guid}")]
     public async Task<IActionResult> StoreUpload(Guid assetId, CancellationToken ct)
     {
@@ -66,8 +67,10 @@ public sealed class PostMediaController(
     {
         try
         {
+            var contentType = await storageService.GetContentTypeAsync(assetId.ToString(), ct)
+                ?? "application/octet-stream";
             var stream = await storageService.LoadAsync(assetId.ToString(), ct);
-            return File(stream, "application/octet-stream");
+            return File(stream, contentType);
         }
         catch (FileNotFoundException) { return NotFound(); }
     }
