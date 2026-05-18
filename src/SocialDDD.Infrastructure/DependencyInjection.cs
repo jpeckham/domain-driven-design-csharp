@@ -14,6 +14,7 @@ using SocialDDD.Infrastructure.Persistence.Posts;
 using SocialDDD.Infrastructure.Persistence.RememberedDevices;
 using SocialDDD.Infrastructure.Persistence.Users;
 using SocialDDD.Infrastructure.Persistence.VerificationCodes;
+using SocialDDD.Infrastructure.ProfileImages;
 
 namespace SocialDDD.Infrastructure;
 
@@ -69,6 +70,12 @@ public static class DependencyInjection
             services.AddScoped<IPasswordResetTokenRepository, MongoDbPasswordResetTokenRepository>();
         else
             services.AddSingleton<IPasswordResetTokenRepository, InMemoryPasswordResetTokenRepository>();
+
+        // Profile image storage: local file system
+        var profileImageDir = configuration["ProfileImages:Directory"] ?? "./data/profile-images";
+        Directory.CreateDirectory(profileImageDir);
+        services.AddSingleton<IProfileImageStorageService>(_ =>
+            new LocalFileProfileImageStorageService(profileImageDir));
 
         services.AddScoped<RegisterPendingUserCommand>();
         services.AddScoped<VerifyRegistrationCommand>();

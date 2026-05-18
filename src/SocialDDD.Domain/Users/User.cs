@@ -13,6 +13,7 @@ public sealed class User : AggregateRoot<UserId>
     public DisplayName DisplayName { get; private set; } = null!;
     public DateTime RegisteredAt { get; private set; }
     public UserStatus Status { get; private set; }
+    public ProfileImage? ProfileImage { get; private set; }
 
     private User() { }
 
@@ -74,5 +75,19 @@ public sealed class User : AggregateRoot<UserId>
     {
         PasswordHash = newHash;
         RaiseDomainEvent(new Events.PasswordReset(Id));
+    }
+
+    public void SetProfileImage(ProfileImage image)
+    {
+        ProfileImage = image;
+        RaiseDomainEvent(new Events.ProfileImageUpdated(Id, image.AssetId));
+    }
+
+    public void RemoveProfileImage()
+    {
+        if (ProfileImage is null)
+            throw new DomainValidationException("User does not have a profile image.");
+        ProfileImage = null;
+        RaiseDomainEvent(new Events.ProfileImageRemoved(Id));
     }
 }

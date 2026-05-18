@@ -12,4 +12,5 @@ public interface IUserRepository
     Task<bool> ExistsByIdAsync(UserId id, CancellationToken ct = default);
     Task<bool> HandleExistsAsync(Handle handle, CancellationToken ct = default);
     Task UpdateAsync(User user, CancellationToken ct = default);
+    Task<User?> FindByProfileImageAssetIdAsync(Guid assetId, CancellationToken ct = default);
 }

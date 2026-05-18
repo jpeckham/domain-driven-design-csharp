@@ -108,6 +108,7 @@ public class VerifyRegistrationHandlerTests
         public Task<bool> ExistsByIdAsync(UserId id, CancellationToken ct = default) => Task.FromResult(_user?.Id == id);
         public Task<bool> HandleExistsAsync(Handle handle, CancellationToken ct = default) => Task.FromResult(_user?.Handle == handle);
         public Task UpdateAsync(User u, CancellationToken ct = default) { _user = u; return Task.CompletedTask; }
+        public Task<User?> FindByProfileImageAssetIdAsync(Guid assetId, CancellationToken ct = default) => Task.FromResult<User?>(null);
     }
 
     private sealed class FakeCodeRepository(UserId? userId, VerificationCode? code) : IVerificationCodeRepository

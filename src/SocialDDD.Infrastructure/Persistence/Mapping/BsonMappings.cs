@@ -31,12 +31,31 @@ internal static class BsonMappings
         // AutoMap traverses base classes. When it processes User it first
         // registers Entity<UserId>, where Id IS the declaring type, so the
         // Id convention correctly sets IdMemberMap there. User inherits it.
+        BsonClassMap.RegisterClassMap<ProfileImage>(cm =>
+        {
+            cm.AutoMap();
+            cm.SetIgnoreExtraElements(true);
+            cm.MapConstructor(
+                typeof(ProfileImage).GetConstructor([
+                    typeof(Guid), typeof(string), typeof(string), typeof(long),
+                    typeof(int?), typeof(int?), typeof(DateTimeOffset)
+                ])!,
+                nameof(ProfileImage.AssetId),
+                nameof(ProfileImage.StorageKey),
+                nameof(ProfileImage.ContentType),
+                nameof(ProfileImage.ByteLength),
+                nameof(ProfileImage.Width),
+                nameof(ProfileImage.Height),
+                nameof(ProfileImage.UploadedAt));
+        });
+
         BsonClassMap.RegisterClassMap<User>(cm =>
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
             cm.MapMember(u => u.Handle).SetElementName("handle");
             cm.MapMember(u => u.DisplayName).SetElementName("displayName");
+            cm.MapMember(u => u.ProfileImage).SetElementName("profileImage");
         });
 
         BsonClassMap.RegisterClassMap<Post>(cm =>

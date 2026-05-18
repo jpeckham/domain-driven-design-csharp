@@ -46,4 +46,9 @@ internal sealed class UserRepository(MongoDbContext context) : IUserRepository
 
     public Task UpdateAsync(User user, CancellationToken ct = default) =>
         context.Users.ReplaceOneAsync(u => u.Id == user.Id, user, cancellationToken: ct);
+
+    public async Task<User?> FindByProfileImageAssetIdAsync(Guid assetId, CancellationToken ct = default) =>
+        await context.Users
+            .Find(u => u.ProfileImage != null && u.ProfileImage.AssetId == assetId)
+            .FirstOrDefaultAsync(ct);
 }

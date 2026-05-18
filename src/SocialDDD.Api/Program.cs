@@ -6,6 +6,8 @@ using SocialDDD.Application.Posts;
 using SocialDDD.Application.Posts.Commands;
 using SocialDDD.Application.Posts.Queries;
 using SocialDDD.Application.Users;
+using SocialDDD.Application.Users.Commands;
+using SocialDDD.Application.Users.Queries;
 using SocialDDD.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +15,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<BeginProfileImageUploadCommandHandler>();
+builder.Services.AddScoped<CompleteProfileImageUploadCommandHandler>();
+builder.Services.AddScoped<RemoveProfileImageCommandHandler>();
+builder.Services.AddScoped<GetProfileImageQueryHandler>();
 builder.Services.AddScoped<PostService>();
 builder.Services.AddScoped<LikePostCommandHandler>();
 builder.Services.AddScoped<UnlikePostCommandHandler>();
