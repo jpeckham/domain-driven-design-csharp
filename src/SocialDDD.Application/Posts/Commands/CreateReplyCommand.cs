@@ -28,7 +28,6 @@ public sealed class CreateReplyCommandHandler(
 
         var authorHandle = author.Handle;
 
-        // Auto-prefix with @parentAuthorHandle if not already starting with it
         var parentAuthor = await userRepository.GetByIdAsync(parentPost.AuthorId, ct);
         string content = command.Content;
         if (parentAuthor is not null)

@@ -1,6 +1,7 @@
 using SocialDDD.Application.Posts.DTOs;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Posts;
+using SocialDDD.Domain.Users;
 
 namespace SocialDDD.Application.Posts.Queries;
 
@@ -22,23 +23,19 @@ public sealed class GetPostWithConversationQueryHandler(
         var descendants = await postRepository.GetConversationAsync(
             postId, query.DepthLimit, query.RepliesPerLevel, ct);
 
-        // Count direct replies for each post (including root)
         var allPosts = new List<Post> { rootPost }.Concat(descendants).ToList();
         var replyCountByParent = allPosts
             .Where(p => p.ParentPostId is not null)
             .GroupBy(p => p.ParentPostId!.Value)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        // Build lookup by PostId
-        var postById = allPosts.ToDictionary(p => p.Id.Value);
+        Handle? requester = requesterHandle is not null ? new Handle(requesterHandle) : null;
 
-        // Map to DTOs
-        var dtoById = new Dictionary<Guid, PostConversationDto>();
-
-        PostDto ToDto(Post p)
+        async Task<PostDto> ToDtoAsync(Post p)
         {
             replyCountByParent.TryGetValue(p.Id.Value, out var replyCount);
-            bool likedByMe = false; // For now, not checking per-post like status
+            bool likedByMe = requester is not null
+                && await postRepository.IsLikedByAsync(p.Id, requester, ct);
             return new PostDto(
                 p.Id.Value,
                 p.AuthorId.Value,
@@ -52,13 +49,10 @@ public sealed class GetPostWithConversationQueryHandler(
                 p.Hashtags.ToList());
         }
 
-        // Build tree bottom-up: iterate descendants in reverse (leaves first)
-        // Actually build top-down: create nodes for all, then link
-        var conversationById = allPosts.ToDictionary(
-            p => p.Id.Value,
-            p => new PostConversationDto(ToDto(p), new List<PostConversationDto>()));
+        var conversationById = new Dictionary<Guid, PostConversationDto>();
+        foreach (var p in allPosts)
+            conversationById[p.Id.Value] = new PostConversationDto(await ToDtoAsync(p), new List<PostConversationDto>());
 
-        // Link children to parents
         foreach (var post in descendants)
         {
             if (post.ParentPostId is not null

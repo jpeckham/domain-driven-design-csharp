@@ -67,7 +67,6 @@ public sealed partial class Post : AggregateRoot<PostId>
                 .Matches(Content.Value)
                 .Select(m => m.Groups[1].Value.ToLowerInvariant())
                 .Where(v => authorId is null || v != authorId.Value)
-                .Where(v => System.Text.RegularExpressions.Regex.IsMatch(v, @"^[a-z0-9_]{1,30}$"))
                 .Select(v => new Handle(v)));
 
         Hashtags = new HashSet<string>(
