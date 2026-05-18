@@ -27,12 +27,23 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
-        services.AddSingleton<IVerificationCodeRepository, InMemoryVerificationCodeRepository>();
+        // Verification code repository: "MongoDb" or "InMemory" (default)
+        var verificationCodeRepo = configuration["Features:EmailVerificationRepository"] ?? "InMemory";
+        if (verificationCodeRepo.Equals("MongoDb", StringComparison.OrdinalIgnoreCase))
+            services.AddScoped<IVerificationCodeRepository, MongoDbVerificationCodeRepository>();
+        else
+            services.AddSingleton<IVerificationCodeRepository, InMemoryVerificationCodeRepository>();
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
-        services.AddScoped<IEmailService, ConsoleEmailService>();
+
+        // Email service: "AzureCommunication" or "Console" (default)
+        var emailService = configuration["Features:EmailService"] ?? "Console";
+        if (emailService.Equals("AzureCommunication", StringComparison.OrdinalIgnoreCase))
+            services.AddScoped<IEmailService, AzureCommunicationEmailService>();
+        else
+            services.AddScoped<IEmailService, ConsoleEmailService>();
 
         services.AddScoped<RegisterPendingUserCommand>();
         services.AddScoped<VerifyRegistrationCommand>();
