@@ -28,7 +28,7 @@ public sealed class UserService(
             throw new DomainException("Handle is already taken.");
 
         var hash = passwordHasher.Hash(request.Password);
-        var user = User.Register(username, email, new PasswordHash(hash), handle, displayName);
+        var user = User.RegisterImmediate(username, email, new PasswordHash(hash), handle, displayName);
 
         await userRepository.AddAsync(user, ct);
         await eventDispatcher.DispatchAsync(user.PopDomainEvents(), ct);
@@ -44,6 +44,9 @@ public sealed class UserService(
 
         if (!passwordHasher.Verify(request.Password, user.PasswordHash.Value))
             throw new DomainException("Invalid credentials.");
+
+        if (user.Status == UserStatus.Pending)
+            throw new DomainException("Account is not yet verified. Please check your email.");
 
         return new TokenResponse(tokenService.GenerateToken(user), user.Id.Value, user.Username.Value);
     }
