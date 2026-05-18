@@ -46,7 +46,7 @@ public sealed class CreateReplyCommandHandler(
         return new PostDto(
             reply.Id.Value,
             reply.AuthorId.Value,
-            reply.Content.Value,
+            reply.Content?.Value,
             reply.PostedAt,
             reply.LikeCount,
             false,

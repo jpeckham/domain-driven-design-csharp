@@ -23,7 +23,7 @@ public sealed class PostService(
         await postRepository.AddAsync(post, ct);
         await eventDispatcher.DispatchAsync(post.PopDomainEvents(), ct);
 
-        return await ToDtoAsync(post, null, ct);
+        return await ToDtoAsync(post, null, null, ct);
     }
 
     public async Task DeleteAsync(Guid postId, Guid requesterId, CancellationToken ct = default)
@@ -41,17 +41,19 @@ public sealed class PostService(
     }
 
     public async Task<IReadOnlyList<PostDto>> GetFeedAsync(
-        int skip, int limit, string? requesterHandle = null, bool rootOnly = false, CancellationToken ct = default)
+        int skip, int limit, Guid? requesterId = null, bool rootOnly = false, CancellationToken ct = default)
     {
         var posts = await postRepository.GetFeedAsync(skip, limit, rootOnly, ct);
-        return await ToDtosAsync(posts, requesterHandle, ct);
+        var (handle, userId) = await ResolveRequesterAsync(requesterId, ct);
+        return await ToDtosAsync(posts, handle, userId, ct);
     }
 
     public async Task<IReadOnlyList<PostDto>> GetByAuthorAsync(
-        Guid userId, string? requesterHandle = null, CancellationToken ct = default)
+        Guid userId, Guid? requesterId = null, CancellationToken ct = default)
     {
         var posts = await postRepository.GetByAuthorAsync(UserId.From(userId), ct);
-        return await ToDtosAsync(posts, requesterHandle, ct);
+        var (handle, requesterUserId) = await ResolveRequesterAsync(requesterId, ct);
+        return await ToDtosAsync(posts, handle, requesterUserId, ct);
     }
 
     public async Task<string?> GetHandleByUserIdAsync(Guid userId, CancellationToken ct = default)
@@ -60,34 +62,54 @@ public sealed class PostService(
         return user?.Handle.Value;
     }
 
-    private async Task<PostDto> ToDtoAsync(Post post, Handle? requesterHandle, CancellationToken ct)
+    private async Task<(Handle? handle, UserId? userId)> ResolveRequesterAsync(Guid? requesterId, CancellationToken ct)
+    {
+        if (requesterId is null) return (null, null);
+        var userId = UserId.From(requesterId.Value);
+        var user = await userRepository.GetByIdAsync(userId, ct);
+        return (user?.Handle, userId);
+    }
+
+    private async Task<PostDto> ToDtoAsync(Post post, Handle? requesterHandle, UserId? requesterUserId, CancellationToken ct)
     {
         bool likedByMe = requesterHandle is not null
             && await postRepository.IsLikedByAsync(post.Id, requesterHandle, ct);
         int replyCount = await postRepository.CountRepliesAsync(post.Id, ct);
+        int repostCount = await postRepository.GetRepostCountAsync(post.Id, ct);
+        bool isRepostedByMe = requesterUserId is not null
+            && await postRepository.FindRepostAsync(post.Id, requesterUserId, ct) is not null;
+
+        PostDto? originalPost = null;
+        if (post.OriginalPostId is not null)
+        {
+            var orig = await postRepository.GetByIdAsync(post.OriginalPostId, ct);
+            if (orig is not null)
+                originalPost = await ToDtoAsync(orig, requesterHandle, requesterUserId, ct);
+        }
+
         return new PostDto(
             post.Id.Value,
             post.AuthorId.Value,
-            post.Content.Value,
+            post.Content?.Value,
             post.PostedAt,
             post.LikeCount,
             likedByMe,
             post.ParentPostId?.Value,
             replyCount,
             post.Mentions.Select(h => h.Value).ToList(),
-            post.Hashtags.ToList());
+            post.Hashtags.ToList(),
+            post.OriginalPostId?.Value,
+            repostCount,
+            isRepostedByMe,
+            originalPost);
     }
 
     private async Task<IReadOnlyList<PostDto>> ToDtosAsync(
-        IReadOnlyList<Post> posts, string? requesterHandle, CancellationToken ct)
+        IReadOnlyList<Post> posts, Handle? requesterHandle, UserId? requesterUserId, CancellationToken ct)
     {
-        Handle? handle = requesterHandle is not null ? new Handle(requesterHandle) : null;
-
         var dtos = new List<PostDto>(posts.Count);
         foreach (var post in posts)
-        {
-            dtos.Add(await ToDtoAsync(post, handle, ct));
-        }
+            dtos.Add(await ToDtoAsync(post, requesterHandle, requesterUserId, ct));
         return dtos;
     }
 }
