@@ -43,6 +43,9 @@ internal static class BsonMappings
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
             cm.MapMember(p => p.LikedBy).SetElementName("likedBy");
+            cm.MapMember(p => p.ParentPostId).SetElementName("parentPostId");
+            cm.MapMember(p => p.Mentions).SetElementName("mentions");
+            cm.MapMember(p => p.Hashtags).SetElementName("hashtags");
         });
     }
 }

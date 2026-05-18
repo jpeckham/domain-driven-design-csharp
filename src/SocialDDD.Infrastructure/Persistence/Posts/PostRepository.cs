@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
@@ -23,10 +24,16 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
         return results;
     }
 
-    public async Task<IReadOnlyList<Post>> GetFeedAsync(int skip, int limit, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Post>> GetFeedAsync(int skip, int limit, bool rootOnly = false, CancellationToken ct = default)
     {
+        var filter = rootOnly
+            ? Builders<Post>.Filter.And(
+                Builders<Post>.Filter.Eq(p => p.IsDeleted, false),
+                Builders<Post>.Filter.Eq("parentPostId", BsonNull.Value))
+            : Builders<Post>.Filter.Eq(p => p.IsDeleted, false);
+
         var results = await context.Posts
-            .Find(p => !p.IsDeleted)
+            .Find(filter)
             .SortByDescending(p => p.PostedAt)
             .Skip(skip)
             .Limit(limit)
@@ -60,5 +67,55 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
             Builders<Post>.Filter.Eq(p => p.Id, postId),
             Builders<Post>.Filter.AnyEq("likedBy", handle.Value));
         return await context.Posts.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
+    }
+
+    public async Task<IReadOnlyList<Post>> GetRepliesAsync(PostId parentPostId, int limit, CancellationToken ct = default)
+    {
+        var filter = Builders<Post>.Filter.And(
+            Builders<Post>.Filter.Eq("parentPostId", parentPostId.Value.ToString()),
+            Builders<Post>.Filter.Eq(p => p.IsDeleted, false));
+
+        var results = await context.Posts
+            .Find(filter)
+            .SortByDescending(p => p.PostedAt)
+            .Limit(limit)
+            .ToListAsync(ct);
+        return results;
+    }
+
+    public async Task<IReadOnlyList<Post>> GetConversationAsync(
+        PostId rootPostId, int depthLimit, int repliesPerLevel, CancellationToken ct = default)
+    {
+        var allDescendants = new List<Post>();
+        var currentLevel = new List<PostId> { rootPostId };
+
+        for (int depth = 0; depth < depthLimit && currentLevel.Count > 0; depth++)
+        {
+            var parentIds = currentLevel.Select(id => id.Value.ToString()).ToList();
+
+            var filter = Builders<Post>.Filter.And(
+                Builders<Post>.Filter.In("parentPostId", parentIds),
+                Builders<Post>.Filter.Eq(p => p.IsDeleted, false));
+
+            var levelPosts = await context.Posts
+                .Find(filter)
+                .SortByDescending(p => p.PostedAt)
+                .Limit(repliesPerLevel * currentLevel.Count)
+                .ToListAsync(ct);
+
+            allDescendants.AddRange(levelPosts);
+            currentLevel = levelPosts.Select(p => p.Id).ToList();
+        }
+
+        return allDescendants;
+    }
+
+    public async Task<int> CountRepliesAsync(PostId parentPostId, CancellationToken ct = default)
+    {
+        var filter = Builders<Post>.Filter.And(
+            Builders<Post>.Filter.Eq("parentPostId", parentPostId.Value.ToString()),
+            Builders<Post>.Filter.Eq(p => p.IsDeleted, false));
+
+        return (int)await context.Posts.CountDocumentsAsync(filter, cancellationToken: ct);
     }
 }

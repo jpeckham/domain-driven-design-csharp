@@ -74,5 +74,11 @@ public sealed class MongoDbContext
             new CreateIndexOptions { Background = true, Name = "likedBy_asc" });
 
         Posts.Indexes.CreateOne(postLikedByIndex);
+
+        var postParentIdIndex = new CreateIndexModel<Post>(
+            Builders<Post>.IndexKeys.Ascending("parentPostId"),
+            new CreateIndexOptions { Background = true, Name = "parentPostId_asc" });
+
+        Posts.Indexes.CreateOne(postParentIdIndex);
     }
 }

@@ -23,7 +23,7 @@ public sealed class PostService(
         await postRepository.AddAsync(post, ct);
         await eventDispatcher.DispatchAsync(post.PopDomainEvents(), ct);
 
-        return ToDto(post);
+        return await ToDtoAsync(post, null, ct);
     }
 
     public async Task DeleteAsync(Guid postId, Guid requesterId, CancellationToken ct = default)
@@ -41,9 +41,9 @@ public sealed class PostService(
     }
 
     public async Task<IReadOnlyList<PostDto>> GetFeedAsync(
-        int skip, int limit, string? requesterHandle = null, CancellationToken ct = default)
+        int skip, int limit, string? requesterHandle = null, bool rootOnly = false, CancellationToken ct = default)
     {
-        var posts = await postRepository.GetFeedAsync(skip, limit, ct);
+        var posts = await postRepository.GetFeedAsync(skip, limit, rootOnly, ct);
         return await ToDtosAsync(posts, requesterHandle, ct);
     }
 
@@ -60,6 +60,24 @@ public sealed class PostService(
         return user?.Handle.Value;
     }
 
+    private async Task<PostDto> ToDtoAsync(Post post, Handle? requesterHandle, CancellationToken ct)
+    {
+        bool likedByMe = requesterHandle is not null
+            && await postRepository.IsLikedByAsync(post.Id, requesterHandle, ct);
+        int replyCount = await postRepository.CountRepliesAsync(post.Id, ct);
+        return new PostDto(
+            post.Id.Value,
+            post.AuthorId.Value,
+            post.Content.Value,
+            post.PostedAt,
+            post.LikeCount,
+            likedByMe,
+            post.ParentPostId?.Value,
+            replyCount,
+            post.Mentions.Select(h => h.Value).ToList(),
+            post.Hashtags.ToList());
+    }
+
     private async Task<IReadOnlyList<PostDto>> ToDtosAsync(
         IReadOnlyList<Post> posts, string? requesterHandle, CancellationToken ct)
     {
@@ -68,13 +86,8 @@ public sealed class PostService(
         var dtos = new List<PostDto>(posts.Count);
         foreach (var post in posts)
         {
-            bool likedByMe = handle is not null
-                && await postRepository.IsLikedByAsync(post.Id, handle, ct);
-            dtos.Add(new PostDto(post.Id.Value, post.AuthorId.Value, post.Content.Value, post.PostedAt, post.LikeCount, likedByMe));
+            dtos.Add(await ToDtoAsync(post, handle, ct));
         }
         return dtos;
     }
-
-    private static PostDto ToDto(Post post) =>
-        new(post.Id.Value, post.AuthorId.Value, post.Content.Value, post.PostedAt, post.LikeCount, false);
 }

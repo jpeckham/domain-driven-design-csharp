@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SocialDDD.Application.Posts;
 using SocialDDD.Application.Posts.Commands;
 using SocialDDD.Application.Posts.DTOs;
+using SocialDDD.Application.Posts.Queries;
 using SocialDDD.Domain.Exceptions;
 
 namespace SocialDDD.Api.Controllers;
@@ -13,7 +14,9 @@ namespace SocialDDD.Api.Controllers;
 public sealed class PostsController(
     PostService postService,
     LikePostCommandHandler likeHandler,
-    UnlikePostCommandHandler unlikeHandler) : ControllerBase
+    UnlikePostCommandHandler unlikeHandler,
+    CreateReplyCommandHandler createReplyHandler,
+    GetPostWithConversationQueryHandler conversationHandler) : ControllerBase
 {
     [Authorize]
     [HttpPost]
@@ -26,6 +29,50 @@ public sealed class PostsController(
         }
         catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
         catch (DomainException ex) { return Conflict(new { error = ex.Message }); }
+    }
+
+    [Authorize]
+    [HttpPost("{postId:guid}/replies")]
+    public async Task<IActionResult> CreateReply(Guid postId, [FromBody] CreateReplyRequest request, CancellationToken ct)
+    {
+        var requesterId = GetRequesterId();
+        if (requesterId is null) return Unauthorized();
+
+        try
+        {
+            var command = new CreateReplyCommand(postId, requesterId.Value, request.Content);
+            var reply = await createReplyHandler.HandleAsync(command, ct);
+            return CreatedAtAction(nameof(GetPost), new { postId = reply.PostId }, reply);
+        }
+        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainException ex)
+        {
+            return ex.Message.Contains("not found")
+                ? NotFound(new { error = ex.Message })
+                : Conflict(new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("{postId:guid}")]
+    public async Task<IActionResult> GetPost(Guid postId, [FromQuery] int depthLimit = 3, [FromQuery] int repliesPerLevel = 100, CancellationToken ct = default)
+    {
+        var requesterId = GetRequesterId();
+        var requesterHandle = requesterId.HasValue
+            ? await postService.GetHandleByUserIdAsync(requesterId.Value, ct)
+            : null;
+
+        try
+        {
+            var query = new GetPostWithConversationQuery(postId, depthLimit, repliesPerLevel);
+            var result = await conversationHandler.HandleAsync(query, requesterHandle, ct);
+            return Ok(result);
+        }
+        catch (DomainException ex)
+        {
+            return ex.Message.Contains("not found")
+                ? NotFound(new { error = ex.Message })
+                : Conflict(new { error = ex.Message });
+        }
     }
 
     [Authorize]
@@ -52,6 +99,7 @@ public sealed class PostsController(
     public async Task<IActionResult> GetFeed(
         [FromQuery] int skip = 0,
         [FromQuery] int limit = 20,
+        [FromQuery] bool rootOnly = false,
         CancellationToken ct = default)
     {
         var requesterId = GetRequesterId();
@@ -59,7 +107,7 @@ public sealed class PostsController(
             ? await postService.GetHandleByUserIdAsync(requesterId.Value, ct)
             : null;
 
-        var posts = await postService.GetFeedAsync(skip, limit, requesterHandle, ct);
+        var posts = await postService.GetFeedAsync(skip, limit, requesterHandle, rootOnly, ct);
         return Ok(posts);
     }
 

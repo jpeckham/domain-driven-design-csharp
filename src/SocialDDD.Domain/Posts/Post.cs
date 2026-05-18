@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Posts.Events;
 using SocialDDD.Domain.Primitives;
@@ -5,14 +6,23 @@ using SocialDDD.Domain.Users;
 
 namespace SocialDDD.Domain.Posts;
 
-public sealed class Post : AggregateRoot<PostId>
+public sealed partial class Post : AggregateRoot<PostId>
 {
+    [GeneratedRegex(@"@([a-zA-Z0-9_]{1,30})")]
+    private static partial Regex MentionPattern();
+
+    [GeneratedRegex(@"#([a-zA-Z0-9_]+)")]
+    private static partial Regex HashtagPattern();
+
     public UserId AuthorId { get; private set; } = null!;
     public PostContent Content { get; private set; } = null!;
     public DateTime PostedAt { get; private set; }
     public bool IsDeleted { get; private set; }
+    public PostId? ParentPostId { get; private set; }
 
     public HashSet<Handle> LikedBy { get; private set; } = new();
+    public HashSet<Handle> Mentions { get; private set; } = new();
+    public HashSet<string> Hashtags { get; private set; } = new();
 
     public int LikeCount => LikedBy.Count;
 
@@ -26,10 +36,44 @@ public sealed class Post : AggregateRoot<PostId>
             AuthorId = authorId,
             Content = content,
             PostedAt = DateTime.UtcNow,
-            IsDeleted = false
+            IsDeleted = false,
+            ParentPostId = null
         };
+        post.ExtractMentionsAndHashtags(authorId: null);
         post.RaiseDomainEvent(new PostCreated(post.Id, authorId));
         return post;
+    }
+
+    public static Post CreateReply(PostId parentPostId, UserId authorId, Handle authorHandle, PostContent content)
+    {
+        var post = new Post
+        {
+            Id = PostId.New(),
+            AuthorId = authorId,
+            Content = content,
+            PostedAt = DateTime.UtcNow,
+            IsDeleted = false,
+            ParentPostId = parentPostId
+        };
+        post.ExtractMentionsAndHashtags(authorId: authorHandle);
+        post.RaiseDomainEvent(new PostCreated(post.Id, authorId));
+        return post;
+    }
+
+    private void ExtractMentionsAndHashtags(Handle? authorId)
+    {
+        Mentions = new HashSet<Handle>(
+            MentionPattern()
+                .Matches(Content.Value)
+                .Select(m => m.Groups[1].Value.ToLowerInvariant())
+                .Where(v => authorId is null || v != authorId.Value)
+                .Where(v => System.Text.RegularExpressions.Regex.IsMatch(v, @"^[a-z0-9_]{1,30}$"))
+                .Select(v => new Handle(v)));
+
+        Hashtags = new HashSet<string>(
+            HashtagPattern()
+                .Matches(Content.Value)
+                .Select(m => m.Groups[1].Value.ToLowerInvariant()));
     }
 
     public void Delete()
