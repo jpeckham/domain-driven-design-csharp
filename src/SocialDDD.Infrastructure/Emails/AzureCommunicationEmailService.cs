@@ -8,4 +8,9 @@ internal sealed class AzureCommunicationEmailService : IEmailService
     {
         throw new NotImplementedException("AzureCommunicationEmailService is not yet implemented.");
     }
+
+    public Task SendOtpEmailAsync(string toEmail, string otp, CancellationToken ct = default)
+    {
+        throw new NotImplementedException("AzureCommunicationEmailService is not yet implemented.");
+    }
 }

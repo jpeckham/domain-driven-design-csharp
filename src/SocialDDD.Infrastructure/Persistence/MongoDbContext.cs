@@ -3,6 +3,8 @@ using MongoDB.Driver;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
 using SocialDDD.Infrastructure.Persistence.Mapping;
+using SocialDDD.Infrastructure.Persistence.OtpCodes;
+using SocialDDD.Infrastructure.Persistence.RememberedDevices;
 using SocialDDD.Infrastructure.Persistence.VerificationCodes;
 
 namespace SocialDDD.Infrastructure.Persistence;
@@ -25,6 +27,10 @@ public sealed class MongoDbContext
     public IMongoCollection<Post> Posts => _database.GetCollection<Post>("posts");
     internal IMongoCollection<VerificationCodeDocument> VerificationCodes =>
         _database.GetCollection<VerificationCodeDocument>("verification_codes");
+    internal IMongoCollection<RememberedDeviceDocument> RememberedDevices =>
+        _database.GetCollection<RememberedDeviceDocument>("remembered_devices");
+    internal IMongoCollection<OtpDocument> DeviceOtps =>
+        _database.GetCollection<OtpDocument>("device_otps");
 
     private void EnsureIndexes()
     {
@@ -39,5 +45,19 @@ public sealed class MongoDbContext
             new CreateIndexOptions { ExpireAfter = TimeSpan.Zero, Name = "expiresAt_ttl" });
 
         VerificationCodes.Indexes.CreateOne(ttlIndex);
+
+        var rememberedDeviceIndex = new CreateIndexModel<RememberedDeviceDocument>(
+            Builders<RememberedDeviceDocument>.IndexKeys
+                .Ascending(d => d.UserId)
+                .Ascending(d => d.DeviceId),
+            new CreateIndexOptions { Unique = true, Background = true, Name = "userId_deviceId_unique" });
+
+        RememberedDevices.Indexes.CreateOne(rememberedDeviceIndex);
+
+        var otpTtlIndex = new CreateIndexModel<OtpDocument>(
+            Builders<OtpDocument>.IndexKeys.Ascending(d => d.ExpiresAt),
+            new CreateIndexOptions { ExpireAfter = TimeSpan.Zero, Name = "otp_expiresAt_ttl" });
+
+        DeviceOtps.Indexes.CreateOne(otpTtlIndex);
     }
 }
