@@ -1,6 +1,6 @@
 using SocialDDD.Domain.Posts;
 
-namespace SocialDDD.Infrastructure.PostMedia;
+namespace SocialDDD.Infrastructure.PostMediaStorage;
 
 public sealed class LocalFilePostMediaStorageService(string baseDirectory) : IPostMediaStorageService
 {

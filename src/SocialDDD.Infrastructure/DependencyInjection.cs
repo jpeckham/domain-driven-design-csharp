@@ -15,7 +15,7 @@ using SocialDDD.Infrastructure.Persistence.Posts;
 using SocialDDD.Infrastructure.Persistence.RememberedDevices;
 using SocialDDD.Infrastructure.Persistence.Users;
 using SocialDDD.Infrastructure.Persistence.VerificationCodes;
-using SocialDDD.Infrastructure.PostMedia;
+using SocialDDD.Infrastructure.PostMediaStorage;
 using SocialDDD.Infrastructure.ProfileImages;
 
 namespace SocialDDD.Infrastructure;
