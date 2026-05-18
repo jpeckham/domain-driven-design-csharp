@@ -26,7 +26,8 @@ public sealed partial class Post : AggregateRoot<PostId>
     public HashSet<string> Hashtags { get; private set; } = new();
 
     public int LikeCount => LikedBy.Count;
-    public List<PostMedia> Media { get; private set; } = [];
+    private List<PostMedia> _media = [];
+    public IReadOnlyList<PostMedia> Media => _media;
 
     private Post() { }
 
@@ -146,6 +147,7 @@ public sealed partial class Post : AggregateRoot<PostId>
 
     public void AttachMedia(IReadOnlyList<PostMedia> media)
     {
+        if (media.Count == 0) return;
         if (media.Count > 4)
             throw new DomainException("A post may contain at most 4 media items.");
         if (media.Count > 1 && media.Any(m => m.Kind != media[0].Kind))
@@ -153,6 +155,6 @@ public sealed partial class Post : AggregateRoot<PostId>
         if (media[0].Kind == MediaKind.Video && media.Count > 1)
             throw new DomainException("A post may contain at most 1 video.");
 
-        Media = media.Select((m, i) => m with { SortOrder = i }).ToList();
+        _media = media.Select((m, i) => m with { SortOrder = i }).ToList();
     }
 }
