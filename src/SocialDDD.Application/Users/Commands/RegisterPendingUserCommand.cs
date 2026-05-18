@@ -16,12 +16,20 @@ public sealed class RegisterPendingUserCommand(
     public async Task ExecuteAsync(RegisterPendingRequest request, CancellationToken ct = default)
     {
         var email = new Email(request.Email);
+
+        var existingUser = await userRepository.GetByEmailAsync(email, ct);
+        if (existingUser is not null)
+        {
+            if (existingUser.Status != UserStatus.Pending)
+                throw new DomainException("Email is already registered.");
+
+            await SendVerificationCodeAsync(existingUser, email, ct);
+            return;
+        }
+
         var username = new Username(request.Username);
         var handle = new Handle(request.Handle);
         var displayName = new DisplayName(request.DisplayName);
-
-        if (await userRepository.ExistsByEmailAsync(email, ct))
-            throw new DomainException("Email is already registered.");
 
         if (await userRepository.ExistsByUsernameAsync(username, ct))
             throw new DomainException("Username is already taken.");
@@ -35,6 +43,11 @@ public sealed class RegisterPendingUserCommand(
         await userRepository.AddAsync(user, ct);
         await eventDispatcher.DispatchAsync(user.PopDomainEvents(), ct);
 
+        await SendVerificationCodeAsync(user, email, ct);
+    }
+
+    private async Task SendVerificationCodeAsync(User user, Email email, CancellationToken ct)
+    {
         var code = new VerificationCode(
             GenerateCode(),
             DateTimeOffset.UtcNow.AddMinutes(15));

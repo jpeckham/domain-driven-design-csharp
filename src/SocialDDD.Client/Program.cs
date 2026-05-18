@@ -18,5 +18,7 @@ builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(baseAddre
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PostApiService>();
+builder.Services.AddScoped<UserApiService>();
+builder.Services.AddScoped<ToastService>();
 
 await builder.Build().RunAsync();

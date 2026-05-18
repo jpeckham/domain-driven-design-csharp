@@ -3,6 +3,9 @@
 @inject PostApiService PostApi
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject UserApiService UserApi
+@inject ToastService Toasts
 
 <section class="workspace">
     <header class="masthead">
@@ -31,6 +34,7 @@
                 </div>
                 <form @onsubmit="CreatePost">
                     <textarea @bind="_newContent" class="composer-input" placeholder="Share an update with your network." maxlength="280"></textarea>
+                    <MediaAttachmentStrip @bind-AssetIds="_newMediaAssetIds" />
                     <div class="composer-submit-row">
                         <span>@(_newContent.Length) / 280</span>
                         <button type="submit" disabled="@_busy">Post</button>
@@ -47,8 +51,27 @@
 
         <section class="feed">
             <div class="feed-title-row">
-                <h2>Recent</h2>
+                <h2>@FeedTitle</h2>
+                <div class="actions">
+                    <button type="button" class="@(!_followingOnly ? "" : "secondary") compact" @onclick="() => SetModeAsync(false)">All posts</button>
+                    @if (_username is not null)
+                    {
+                        <button type="button" class="@(_followingOnly ? "" : "secondary") compact" @onclick="() => SetModeAsync(true)">Following</button>
+                    }
+                </div>
             </div>
+            <form class="search-form" @onsubmit="SubmitSearchAsync">
+                <input @bind="_searchDraft" placeholder="Search posts" />
+                <button type="submit" class="compact">Search</button>
+                @if (!string.IsNullOrWhiteSpace(_searchQuery))
+                {
+                    <button type="button" class="secondary compact" @onclick="ClearSearchAsync">x</button>
+                }
+            </form>
+            @if (!string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                <p class="status">Results for: @_searchQuery</p>
+            }
             @if (_posts.Count == 0)
             {
                 <p class="empty">No posts yet.</p>
@@ -57,24 +80,48 @@
             {
                 @foreach (var post in _posts)
                 {
-                    <article class="post">
-                        <div class="post-header">
-                            <div class="post-author-block">
-                                <div class="post-author-line">
-                                    <span>@post.AuthorId</span>
-                                    <span class="post-time">@post.PostedAt.ToLocalTime().ToString("g")</span>
-                                </div>
-                            </div>
-                            @if (_currentUserId == post.AuthorId)
-                            {
-                                <div class="actions">
-                                    <button type="button" class="secondary compact" @onclick="() => DeletePost(post.PostId)">Delete</button>
-                                </div>
-                            }
+                    <PostCard
+                        Post="post"
+                        IsOwner="@(_currentUserId == post.AuthorId)"
+                        OnDelete="DeletePost"
+                        OnLike="ToggleLikeAsync"
+                        OnReply="OpenReply"
+                        OnRepost="OpenRepost" />
+                    @if (_currentUserId != post.AuthorId && !string.IsNullOrWhiteSpace(post.AuthorHandle))
+                    {
+                        <div class="actions">
+                            <button type="button" class="secondary compact" @onclick="() => BlockFromFeedAsync(post.AuthorHandle!)">
+                                Block @post.AuthorHandle
+                            </button>
                         </div>
-                        <p>@post.Content</p>
-                    </article>
+                    }
+
+                    @if (_replyingTo == post.PostId)
+                    {
+                        <form class="inline-composer" @onsubmit="SubmitReplyAsync">
+                            <textarea @bind="_replyContent" maxlength="280"></textarea>
+                            <MediaAttachmentStrip @bind-AssetIds="_replyMediaAssetIds" />
+                            <div class="composer-submit-row">
+                                <span>@_replyContent.Length / 280</span>
+                                <button type="submit" disabled="@_busy">Reply</button>
+                            </div>
+                        </form>
+                    }
+                    @if (_reposting == post.PostId)
+                    {
+                        <form class="inline-composer" @onsubmit="SubmitQuoteRepostAsync">
+                            <textarea @bind="_repostCommentary" maxlength="280" placeholder="Add a comment"></textarea>
+                            <div class="composer-submit-row">
+                                <span>@_repostCommentary.Length / 280</span>
+                                <button type="submit" disabled="@_busy">Quote repost</button>
+                            </div>
+                        </form>
+                    }
                 }
+            }
+            @if (_hasMore)
+            {
+                <button type="button" class="secondary load-more" @onclick="LoadMoreAsync" disabled="@_busy">Load more</button>
             }
         </section>
     </div>
@@ -85,7 +132,23 @@
     private Guid? _currentUserId;
     private string? _username;
     private string _newContent = "";
+    private List<Guid> _newMediaAssetIds = [];
+    private Guid? _replyingTo;
+    private string _replyContent = "";
+    private List<Guid> _replyMediaAssetIds = [];
+    private Guid? _reposting;
+    private string _repostCommentary = "";
     private bool _busy;
+    private bool _followingOnly;
+    private bool _hasMore;
+    private const int PageSize = 20;
+
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? Query { get; set; }
+
+    private string _searchDraft = "";
+    private string? _searchQuery;
+    private string FeedTitle => string.IsNullOrWhiteSpace(_searchQuery) ? "Recent" : "Search";
 
     protected override async Task OnInitializedAsync()
     {
@@ -96,27 +159,172 @@
         }
         _currentUserId = await Auth.GetCurrentUserIdAsync();
         _username = await Auth.GetCurrentUsernameAsync();
+        _searchQuery = Query;
+        _searchDraft = Query ?? "";
         await LoadFeedAsync();
     }
 
-    private async Task LoadFeedAsync() =>
-        _posts = await PostApi.GetFeedAsync();
+    private async Task LoadFeedAsync(bool reset = true)
+    {
+        var offset = reset ? 0 : _posts.Count;
+        List<PostApiService.PostDto> posts;
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            var result = await PostApi.SearchPostsAsync(_searchQuery, PageSize, offset);
+            posts = result?.Posts ?? [];
+        }
+        else
+        {
+            posts = await PostApi.GetFeedAsync(offset, PageSize, _followingOnly);
+        }
+
+        if (reset)
+            _posts = posts;
+        else
+            _posts.AddRange(posts);
+
+        _hasMore = posts.Count == PageSize;
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        _busy = true;
+        await LoadFeedAsync(reset: false);
+        _busy = false;
+    }
+
+    private async Task SetModeAsync(bool followingOnly)
+    {
+        _followingOnly = followingOnly;
+        _searchQuery = null;
+        _searchDraft = "";
+        Nav.NavigateTo("/feed", replace: true);
+        await LoadFeedAsync();
+    }
+
+    private async Task SubmitSearchAsync()
+    {
+        _searchQuery = _searchDraft.Trim();
+        _followingOnly = false;
+        Nav.NavigateTo($"/feed?q={Uri.EscapeDataString(_searchQuery)}", replace: true);
+        await LoadFeedAsync();
+    }
+
+    private async Task ClearSearchAsync()
+    {
+        _searchQuery = null;
+        _searchDraft = "";
+        Nav.NavigateTo("/feed", replace: true);
+        await LoadFeedAsync();
+    }
 
     private async Task CreatePost()
     {
         if (_currentUserId is null || string.IsNullOrWhiteSpace(_newContent)) return;
 
         _busy = true;
-        await PostApi.CreateAsync(_currentUserId.Value, _newContent);
+        await PostApi.CreateAsync(_currentUserId.Value, _newContent, _newMediaAssetIds);
+        Toasts.Success("Post created.");
         _newContent = "";
+        _newMediaAssetIds = [];
         await LoadFeedAsync();
         _busy = false;
     }
 
     private async Task DeletePost(Guid postId)
     {
-        await PostApi.DeleteAsync(postId);
-        await LoadFeedAsync();
+        if (await ConfirmAsync("Delete this post?") && await PostApi.DeleteAsync(postId))
+        {
+            Toasts.Success("Post deleted.");
+            await LoadFeedAsync();
+        }
+    }
+
+    private async Task ToggleLikeAsync(Guid postId)
+    {
+        var index = _posts.FindIndex(p => p.PostId == postId);
+        if (index < 0) return;
+        var post = _posts[index];
+        var ok = post.LikedByMe
+            ? await PostApi.UnlikePostAsync(postId)
+            : await PostApi.LikePostAsync(postId);
+        if (!ok) return;
+        Toasts.Success(post.LikedByMe ? "Like removed." : "Post liked.");
+        _posts[index] = post with
+        {
+            LikedByMe = !post.LikedByMe,
+            LikeCount = post.LikedByMe ? Math.Max(0, post.LikeCount - 1) : post.LikeCount + 1
+        };
+    }
+
+    private void OpenReply(Guid postId)
+    {
+        var post = _posts.FirstOrDefault(p => p.PostId == postId);
+        _replyingTo = postId;
+        _replyContent = post?.AuthorHandle is { Length: > 0 } ? $"{post.AuthorHandle} " : "";
+        _replyMediaAssetIds = [];
+    }
+
+    private async Task SubmitReplyAsync()
+    {
+        if (_replyingTo is null || string.IsNullOrWhiteSpace(_replyContent)) return;
+        _busy = true;
+        var reply = await PostApi.CreateReplyAsync(_replyingTo.Value, _replyContent, _replyMediaAssetIds);
+        if (reply is not null)
+        {
+            var parentIndex = _posts.FindIndex(p => p.PostId == _replyingTo.Value);
+            if (parentIndex >= 0)
+                _posts.Insert(parentIndex + 1, reply);
+            _replyingTo = null;
+            _replyContent = "";
+            _replyMediaAssetIds = [];
+        }
+        _busy = false;
+    }
+
+    private async Task OpenRepost(Guid postId)
+    {
+        var post = _posts.FirstOrDefault(p => p.PostId == postId);
+        if (post is null) return;
+        if (post.IsRepostedByMe)
+        {
+            if (await PostApi.DeleteRepostAsync(postId))
+                await LoadFeedAsync();
+            return;
+        }
+
+        _reposting = postId;
+        _repostCommentary = "";
+        if (await ConfirmAsync("Repost without commentary?"))
+        {
+            if (await PostApi.CreateRepostAsync(postId))
+                await LoadFeedAsync();
+            _reposting = null;
+        }
+    }
+
+    private async Task SubmitQuoteRepostAsync()
+    {
+        if (_reposting is null) return;
+        _busy = true;
+        if (await PostApi.CreateRepostAsync(_reposting.Value, _repostCommentary))
+        {
+            _reposting = null;
+            _repostCommentary = "";
+            await LoadFeedAsync();
+        }
+        _busy = false;
+    }
+
+    private async Task<bool> ConfirmAsync(string message) =>
+        await JS.InvokeAsync<bool>("confirm", message);
+
+    private async Task BlockFromFeedAsync(string handle)
+    {
+        if (!await UserApi.BlockUserAsync(handle))
+            return;
+        _posts = _posts.Where(p => p.AuthorHandle != handle).ToList();
+        Toasts.Success($"{handle} blocked.");
     }
 
     private async Task Logout()

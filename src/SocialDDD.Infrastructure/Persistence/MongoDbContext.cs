@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using SocialDDD.Domain.Blocks;
+using SocialDDD.Domain.Follows;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
 using SocialDDD.Infrastructure.Persistence.Mapping;
@@ -26,6 +28,8 @@ public sealed class MongoDbContext
 
     public IMongoCollection<User> Users => _database.GetCollection<User>("users");
     public IMongoCollection<Post> Posts => _database.GetCollection<Post>("posts");
+    internal IMongoCollection<Follow> Follows => _database.GetCollection<Follow>("follows");
+    internal IMongoCollection<Block> Blocks => _database.GetCollection<Block>("blocks");
     internal IMongoCollection<VerificationCodeDocument> VerificationCodes =>
         _database.GetCollection<VerificationCodeDocument>("verification_codes");
     internal IMongoCollection<RememberedDeviceDocument> RememberedDevices =>
@@ -42,6 +46,34 @@ public sealed class MongoDbContext
             new CreateIndexOptions { Unique = true, Background = true, Name = "handle_unique" });
 
         Users.Indexes.CreateOne(handleIndex);
+
+        var blockPairIndex = new CreateIndexModel<Block>(
+            Builders<Block>.IndexKeys
+                .Ascending("blockerHandle")
+                .Ascending("blockedHandle"),
+            new CreateIndexOptions { Unique = true, Background = true, Name = "blockerHandle_blockedHandle_unique" });
+
+        Blocks.Indexes.CreateOne(blockPairIndex);
+
+        var blockedHandleIndex = new CreateIndexModel<Block>(
+            Builders<Block>.IndexKeys.Ascending("blockedHandle"),
+            new CreateIndexOptions { Background = true, Name = "blockedHandle_asc" });
+
+        Blocks.Indexes.CreateOne(blockedHandleIndex);
+
+        var followPairIndex = new CreateIndexModel<Follow>(
+            Builders<Follow>.IndexKeys
+                .Ascending("followerHandle")
+                .Ascending("followedHandle"),
+            new CreateIndexOptions { Unique = true, Background = true, Name = "followerHandle_followedHandle_unique" });
+
+        Follows.Indexes.CreateOne(followPairIndex);
+
+        var followedHandleIndex = new CreateIndexModel<Follow>(
+            Builders<Follow>.IndexKeys.Ascending("followedHandle"),
+            new CreateIndexOptions { Background = true, Name = "followedHandle_asc" });
+
+        Follows.Indexes.CreateOne(followedHandleIndex);
 
         var ttlIndex = new CreateIndexModel<VerificationCodeDocument>(
             Builders<VerificationCodeDocument>.IndexKeys.Ascending(d => d.ExpiresAt),
@@ -88,5 +120,13 @@ public sealed class MongoDbContext
             new CreateIndexOptions { Background = true, Name = "originalPostId_authorId_asc" });
 
         Posts.Indexes.CreateOne(postRepostIndex);
+
+        var postSearchIndex = new CreateIndexModel<Post>(
+            Builders<Post>.IndexKeys
+                .Text(p => p.Content)
+                .Text("hashtags"),
+            new CreateIndexOptions { Background = true, Name = "post_text_search" });
+
+        Posts.Indexes.CreateOne(postSearchIndex);
     }
 }

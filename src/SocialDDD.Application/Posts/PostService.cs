@@ -1,6 +1,9 @@
 using SocialDDD.Application.Interfaces;
 using SocialDDD.Application.Posts.DTOs;
+using SocialDDD.Application.Posts.Queries;
+using SocialDDD.Domain.Blocks;
 using SocialDDD.Domain.Exceptions;
+using SocialDDD.Domain.Follows;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
 
@@ -9,9 +12,14 @@ namespace SocialDDD.Application.Posts;
 public sealed class PostService(
     IPostRepository postRepository,
     IUserRepository userRepository,
+    IBlockRepository blockRepository,
+    IFollowRepository followRepository,
     IDomainEventDispatcher eventDispatcher,
     IPendingMediaStore pendingMediaStore)
 {
+    private const int DefaultSearchLimit = 20;
+    private const int MaxSearchLimit = 100;
+
     public async Task<PostDto> CreateAsync(CreatePostRequest request, CancellationToken ct = default)
     {
         var authorId = UserId.From(request.AuthorId);
@@ -43,19 +51,81 @@ public sealed class PostService(
     }
 
     public async Task<IReadOnlyList<PostDto>> GetFeedAsync(
-        int skip, int limit, Guid? requesterId = null, bool rootOnly = false, CancellationToken ct = default)
+        int skip, int limit, Guid? requesterId = null, bool rootOnly = false, bool followingOnly = false, CancellationToken ct = default)
     {
-        var posts = await postRepository.GetFeedAsync(skip, limit, rootOnly, ct);
         var (handle, userId) = await ResolveRequesterAsync(requesterId, ct);
+        var excludedHandles = await GetExcludedHandlesAsync(handle, ct);
+        IReadOnlySet<Handle>? includedHandles = null;
+        if (followingOnly)
+        {
+            if (handle is null) return [];
+            includedHandles = (await followRepository.GetFollowedHandlesAsync(handle, ct)).ToHashSet();
+            if (includedHandles.Count == 0) return [];
+        }
+        var safeLimit = limit <= 0 ? 20 : Math.Min(limit, 100);
+        var safeSkip = Math.Max(skip, 0);
+        var posts = await postRepository.GetFeedAsync(safeSkip, safeLimit, rootOnly, excludedHandles, includedHandles, ct);
         return await ToDtosAsync(posts, handle, userId, ct);
     }
 
     public async Task<IReadOnlyList<PostDto>> GetByAuthorAsync(
         Guid userId, Guid? requesterId = null, CancellationToken ct = default)
     {
-        var posts = await postRepository.GetByAuthorAsync(UserId.From(userId), ct);
+        return await GetByAuthorAsync(userId, limit: 20, offset: 0, requesterId, ct);
+    }
+
+    public async Task<IReadOnlyList<PostDto>> GetByAuthorAsync(
+        Guid userId, int limit, int offset, Guid? requesterId = null, CancellationToken ct = default)
+    {
         var (handle, requesterUserId) = await ResolveRequesterAsync(requesterId, ct);
+        var author = await userRepository.GetByIdAsync(UserId.From(userId), ct);
+        if (author is not null && await IsExcludedAsync(handle, author.Handle, ct))
+            return [];
+        var safeLimit = limit <= 0 ? 20 : Math.Min(limit, 100);
+        var safeOffset = Math.Max(offset, 0);
+        var posts = await postRepository.GetByAuthorAsync(UserId.From(userId), safeLimit, safeOffset, ct);
         return await ToDtosAsync(posts, handle, requesterUserId, ct);
+    }
+
+    public async Task<IReadOnlyList<PostDto>> GetByAuthorHandleAsync(
+        string rawHandle,
+        int limit,
+        int offset,
+        Guid? requesterId = null,
+        CancellationToken ct = default)
+    {
+        var author = await userRepository.FindByHandleAsync(new Handle(rawHandle), ct)
+            ?? throw new DomainException($"User with handle @{new Handle(rawHandle).Value} not found.");
+
+        var safeLimit = limit <= 0 ? 20 : Math.Min(limit, 100);
+        var safeOffset = Math.Max(offset, 0);
+        var (handle, requesterUserId) = await ResolveRequesterAsync(requesterId, ct);
+        if (await IsExcludedAsync(handle, author.Handle, ct))
+            return [];
+        var posts = await postRepository.GetByAuthorAsync(author.Id, safeLimit, safeOffset, ct);
+        return await ToDtosAsync(posts, handle, requesterUserId, ct);
+    }
+
+    public async Task<SearchResultsDto> SearchAsync(SearchPostsQuery query, CancellationToken ct = default)
+    {
+        var trimmedQuery = query.Query?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedQuery))
+            throw new DomainValidationException("Search query is required.");
+        if (trimmedQuery.Length > 200)
+            throw new DomainValidationException("Search query must be 200 characters or fewer.");
+
+        var limit = query.Limit <= 0 ? DefaultSearchLimit : Math.Min(query.Limit, MaxSearchLimit);
+        var offset = query.Offset < 0 ? 0 : query.Offset;
+
+        var requesterUser = query.RequesterHandle is not null
+            ? await userRepository.FindByHandleAsync(query.RequesterHandle, ct)
+            : null;
+
+        var excludedHandles = await GetExcludedHandlesAsync(query.RequesterHandle, ct);
+        var posts = await postRepository.SearchAsync(trimmedQuery, query.RequesterHandle, excludedHandles, limit, offset, ct);
+        var dtos = await ToDtosAsync(posts, query.RequesterHandle, requesterUser?.Id, ct);
+
+        return new SearchResultsDto(dtos.ToList(), trimmedQuery, limit, offset);
     }
 
     public async Task<string?> GetHandleByUserIdAsync(Guid userId, CancellationToken ct = default)
@@ -98,6 +168,7 @@ public sealed class PostService(
 
     private async Task<PostDto> ToDtoAsync(Post post, Handle? requesterHandle, UserId? requesterUserId, CancellationToken ct)
     {
+        var author = await userRepository.GetByIdAsync(post.AuthorId, ct);
         bool likedByMe = requesterHandle is not null
             && await postRepository.IsLikedByAsync(post.Id, requesterHandle, ct);
         int replyCount = await postRepository.CountRepliesAsync(post.Id, ct);
@@ -143,7 +214,10 @@ public sealed class PostService(
             repostCount,
             isRepostedByMe,
             originalPost,
-            mediaDtos);
+            mediaDtos,
+            author?.DisplayName.Value ?? "Unknown",
+            author?.Handle.Display ?? "@unknown",
+            author?.ProfileImage is null ? null : $"/api/profile-images/{author.ProfileImage.AssetId}");
     }
 
     private async Task<IReadOnlyList<PostDto>> ToDtosAsync(
@@ -153,5 +227,29 @@ public sealed class PostService(
         foreach (var post in posts)
             dtos.Add(await ToDtoAsync(post, requesterHandle, requesterUserId, ct));
         return dtos;
+    }
+
+    private async Task<bool> IsExcludedAsync(Handle? requesterHandle, Handle authorHandle, CancellationToken ct)
+    {
+        if (requesterHandle is null)
+            return false;
+
+        return await blockRepository.IsBlockedAsync(requesterHandle, authorHandle, ct)
+            || await blockRepository.IsBlockedAsync(authorHandle, requesterHandle, ct);
+    }
+
+    private async Task<IReadOnlySet<Handle>> GetExcludedHandlesAsync(Handle? requesterHandle, CancellationToken ct)
+    {
+        var excludedHandles = new HashSet<Handle>();
+        if (requesterHandle is null)
+            return excludedHandles;
+
+        foreach (var handle in await blockRepository.GetBlockedHandlesAsync(requesterHandle, ct))
+            excludedHandles.Add(handle);
+
+        foreach (var handle in await blockRepository.GetBlockerHandlesAsync(requesterHandle, ct))
+            excludedHandles.Add(handle);
+
+        return excludedHandles;
     }
 }

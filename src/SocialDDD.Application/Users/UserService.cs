@@ -1,6 +1,8 @@
 using SocialDDD.Application.Interfaces;
 using SocialDDD.Application.Users.DTOs;
+using SocialDDD.Domain.Blocks;
 using SocialDDD.Domain.Exceptions;
+using SocialDDD.Domain.Follows;
 using SocialDDD.Domain.Users;
 
 namespace SocialDDD.Application.Users;
@@ -9,7 +11,9 @@ public sealed class UserService(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
-    IDomainEventDispatcher eventDispatcher)
+    IDomainEventDispatcher eventDispatcher,
+    IFollowRepository followRepository,
+    IBlockRepository blockRepository)
 {
     public async Task<TokenResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
@@ -68,6 +72,37 @@ public sealed class UserService(
         return ToDto(user);
     }
 
+    public async Task<UserProfileDto> GetProfileByHandleAsync(
+        string rawHandle, Guid? requesterId = null, CancellationToken ct = default)
+    {
+        var handle = new Handle(rawHandle);
+        var user = await userRepository.FindByHandleAsync(handle, ct)
+            ?? throw new DomainException($"User with handle @{handle.Value} not found.");
+
+        var requester = requesterId is not null
+            ? await userRepository.GetByIdAsync(UserId.From(requesterId.Value), ct)
+            : null;
+
+        var isOwnProfile = requester?.Id == user.Id;
+        var isFollowedByMe = requester is not null && !isOwnProfile
+            && await followRepository.IsFollowingAsync(requester.Handle, user.Handle, ct);
+        var isBlockedByMe = requester is not null && !isOwnProfile
+            && await blockRepository.IsBlockedAsync(requester.Handle, user.Handle, ct);
+
+        return new UserProfileDto(
+            user.Id.Value,
+            user.Username.Value,
+            user.Handle.Display,
+            user.DisplayName.Value,
+            user.RegisteredAt,
+            ProfileImageUrl(user),
+            await followRepository.CountFollowersAsync(user.Handle, ct),
+            await followRepository.CountFollowingAsync(user.Handle, ct),
+            isOwnProfile,
+            isFollowedByMe,
+            isBlockedByMe);
+    }
+
     public async Task UpdateDisplayNameAsync(Guid id, UpdateDisplayNameRequest request, CancellationToken ct = default)
     {
         var user = await userRepository.GetByIdAsync(UserId.From(id), ct)
@@ -78,5 +113,8 @@ public sealed class UserService(
     }
 
     private static UserDto ToDto(User user) =>
-        new(user.Id.Value, user.Username.Value, user.Email.Value, user.Handle.Display, user.DisplayName.Value, user.RegisteredAt);
+        new(user.Id.Value, user.Username.Value, user.Email.Value, user.Handle.Display, user.DisplayName.Value, user.RegisteredAt, ProfileImageUrl(user));
+
+    private static string? ProfileImageUrl(User user) =>
+        user.ProfileImage is null ? null : $"/api/profile-images/{user.ProfileImage.AssetId}";
 }

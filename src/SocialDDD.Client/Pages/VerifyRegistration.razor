@@ -1,0 +1,105 @@
+@page "/verify-registration"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<section class="auth">
+    <div class="auth-panel">
+        <h1>Verify Email</h1>
+        <p>Enter the 6-digit code sent to your email address.</p>
+
+        <form @onsubmit="HandleVerify">
+            <input type="email" value="@Email" readonly />
+            <input inputmode="numeric" maxlength="6" @bind="_code" placeholder="000000" />
+            <button type="submit" disabled="@_busy">Verify</button>
+        </form>
+
+        <button class="secondary" type="button" disabled="@_busy" @onclick="HandleResend">Resend code</button>
+        <p class="switch">Already verified? <a href="/login">Log in</a></p>
+
+        @if (!string.IsNullOrEmpty(_message))
+        {
+            <p class="message">@_message</p>
+        }
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="field-message">@_error</p>
+        }
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Email { get; set; }
+
+    private string _code = "";
+    private string _error = "";
+    private string _message = "";
+    private bool _busy;
+
+    private async Task HandleVerify()
+    {
+        _busy = true;
+        _error = "";
+        _message = "";
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(Email))
+            {
+                _error = "Email is required.";
+            }
+            else if (_code.Trim().Length != 6)
+            {
+                _error = "Enter the 6-digit verification code.";
+            }
+            else
+            {
+                _error = await Auth.VerifyRegistrationAsync(Email, _code.Trim()) ?? "";
+                if (string.IsNullOrEmpty(_error))
+                {
+                    Nav.NavigateTo("/feed");
+                }
+            }
+        }
+        catch
+        {
+            _error = "Verification failed. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task HandleResend()
+    {
+        _busy = true;
+        _error = "";
+        _message = "";
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(Email))
+            {
+                _error = "Email is required.";
+            }
+            else
+            {
+                _error = await Auth.ResendRegistrationCodeAsync(Email) ?? "";
+                if (string.IsNullOrEmpty(_error))
+                {
+                    _message = "A new verification code was sent.";
+                }
+            }
+        }
+        catch
+        {
+            _error = "Unable to resend the code. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

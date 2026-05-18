@@ -145,6 +145,26 @@ public class ProfileImageCommandTests
     }
 
     [Fact]
+    public async Task CompleteUpload_WhenUploadMissing_ThrowsDomainException()
+    {
+        var user = MakeUser();
+        var repo = new FakeUserRepo(user);
+        var handler = new CompleteProfileImageUploadCommandHandler(
+            repo,
+            new FakeStorageService { Exists = false },
+            new FakeDispatcher());
+
+        var act = async () => await handler.HandleAsync(new CompleteProfileImageUploadCommand(
+            user.Id.Value, Guid.NewGuid(), "image/jpeg", 5000, 200, 200));
+
+        await act.Should().ThrowAsync<DomainException>()
+            .WithMessage("Uploaded profile image was not found.");
+        repo.Updated.Should().BeFalse();
+        user.ProfileImage.Should().BeNull();
+    }
+
+
+    [Fact]
     public async Task CompleteUpload_WithExistingImage_DeletesOldStorageKey()
     {
         var user = MakeUser();
@@ -249,12 +269,15 @@ public class ProfileImageCommandTests
     private sealed class FakeStorageService : IProfileImageStorageService
     {
         public List<string> DeletedKeys { get; } = [];
+        public bool Exists { get; init; } = true;
 
         public Task<(string uploadUrl, string storageKey)> ReserveUploadAsync(Guid assetId, string contentType, CancellationToken ct)
             => Task.FromResult(($"/api/media/uploads/profile/{assetId}", assetId.ToString()));
 
         public Task StoreAsync(Guid assetId, string storageKey, Stream data, string contentType, CancellationToken ct)
             => Task.CompletedTask;
+
+        public Task<bool> ExistsAsync(string storageKey, CancellationToken ct) => Task.FromResult(Exists);
 
         public Task<Stream> LoadAsync(string storageKey, CancellationToken ct)
             => Task.FromResult<Stream>(new MemoryStream([1, 2, 3]));

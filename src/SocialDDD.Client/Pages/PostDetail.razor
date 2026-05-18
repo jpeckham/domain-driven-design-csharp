@@ -1,0 +1,123 @@
+@page "/posts/{PostId:guid}"
+@inject PostApiService PostApi
+@inject AuthService Auth
+
+<section class="workspace single-post-feed">
+    @if (_loading)
+    {
+        <p class="status">Loading conversation...</p>
+    }
+    else if (_conversation is null)
+    {
+        <p class="empty">Post not found.</p>
+    }
+    else
+    {
+        <PostCard
+            Post="_conversation.Post"
+            IsOwner="@(_currentUserId == _conversation.Post.AuthorId)"
+            OnDelete="DeletePostAsync"
+            OnLike="ToggleLikeAsync"
+            OnReply="OpenReply"
+            OnRepost="RepostAsync" />
+
+        @if (_conversation.Post.ParentPostId is not null)
+        {
+            <p class="status">Replying in a conversation</p>
+        }
+
+        @foreach (var item in FlattenReplies(_conversation.Replies, 1).Where(i => i.Level <= 3))
+        {
+            <div class="reply-level reply-level-@item.Level">
+                <PostCard
+                    Post="item.Node.Post"
+                    IsOwner="@(_currentUserId == item.Node.Post.AuthorId)"
+                    OnDelete="DeletePostAsync"
+                    OnLike="ToggleLikeAsync"
+                    OnReply="OpenReply"
+                    OnRepost="RepostAsync" />
+            </div>
+        }
+
+        <form class="inline-composer" @onsubmit="SubmitReplyAsync">
+            <textarea @bind="_replyContent" maxlength="280"></textarea>
+            <MediaAttachmentStrip @bind-AssetIds="_replyMediaAssetIds" />
+            <div class="composer-submit-row">
+                <span>@_replyContent.Length / 280</span>
+                <button type="submit" disabled="@_busy">Reply</button>
+            </div>
+        </form>
+    }
+</section>
+
+@code {
+    [Parameter] public Guid PostId { get; set; }
+
+    private PostApiService.PostConversationDto? _conversation;
+    private Guid? _currentUserId;
+    private Guid? _replyingTo;
+    private string _replyContent = "";
+    private List<Guid> _replyMediaAssetIds = [];
+    private bool _loading = true;
+    private bool _busy;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Auth.InitializeAsync();
+        _currentUserId = await Auth.GetCurrentUserIdAsync();
+        _conversation = await PostApi.GetPostWithConversationAsync(PostId);
+        _replyingTo = PostId;
+        _replyContent = _conversation?.Post.AuthorHandle is { Length: > 0 }
+            ? $"{_conversation.Post.AuthorHandle} "
+            : "";
+        _loading = false;
+    }
+
+    private IEnumerable<(PostApiService.PostConversationDto Node, int Level)> FlattenReplies(
+        IEnumerable<PostApiService.PostConversationDto> nodes,
+        int level)
+    {
+        foreach (var node in nodes)
+        {
+            yield return (node, level);
+            foreach (var child in FlattenReplies(node.Replies, level + 1))
+                yield return child;
+        }
+    }
+
+    private async Task DeletePostAsync(Guid postId)
+    {
+        if (await PostApi.DeleteAsync(postId))
+            _conversation = await PostApi.GetPostWithConversationAsync(PostId);
+    }
+
+    private async Task ToggleLikeAsync(Guid postId)
+    {
+        await PostApi.LikePostAsync(postId);
+        _conversation = await PostApi.GetPostWithConversationAsync(PostId);
+    }
+
+    private void OpenReply(Guid postId)
+    {
+        _replyingTo = postId;
+        _replyContent = "";
+    }
+
+    private async Task RepostAsync(Guid postId)
+    {
+        await PostApi.CreateRepostAsync(postId);
+        _conversation = await PostApi.GetPostWithConversationAsync(PostId);
+    }
+
+    private async Task SubmitReplyAsync()
+    {
+        if (_replyingTo is null || string.IsNullOrWhiteSpace(_replyContent)) return;
+        _busy = true;
+        await PostApi.CreateReplyAsync(_replyingTo.Value, _replyContent, _replyMediaAssetIds);
+        _conversation = await PostApi.GetPostWithConversationAsync(PostId);
+        _replyingTo = PostId;
+        _replyContent = "";
+        _replyMediaAssetIds = [];
+        _busy = false;
+    }
+}

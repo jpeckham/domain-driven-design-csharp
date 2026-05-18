@@ -8,7 +8,8 @@ namespace SocialDDD.Application.Posts.Queries;
 public sealed record GetPostWithConversationQuery(Guid PostId, int DepthLimit = 3, int RepliesPerLevel = 100);
 
 public sealed class GetPostWithConversationQueryHandler(
-    IPostRepository postRepository)
+    IPostRepository postRepository,
+    IUserRepository userRepository)
 {
     public async Task<PostConversationDto> HandleAsync(
         GetPostWithConversationQuery query,
@@ -35,6 +36,7 @@ public sealed class GetPostWithConversationQueryHandler(
 
         async Task<PostDto> ToDtoAsync(Post p)
         {
+            var author = await userRepository.GetByIdAsync(p.AuthorId, ct);
             replyCountByParent.TryGetValue(p.Id.Value, out var replyCount);
             bool likedByMe = requester is not null
                 && await postRepository.IsLikedByAsync(p.Id, requester, ct);
@@ -51,6 +53,7 @@ public sealed class GetPostWithConversationQueryHandler(
                     bool origLikedByMe = requester is not null
                         && await postRepository.IsLikedByAsync(orig.Id, requester, ct);
                     int origRepostCount = await postRepository.GetRepostCountAsync(orig.Id, ct);
+                    var originalAuthor = await userRepository.GetByIdAsync(orig.AuthorId, ct);
                     originalPost = new PostDto(
                         orig.Id.Value,
                         orig.AuthorId.Value,
@@ -65,7 +68,11 @@ public sealed class GetPostWithConversationQueryHandler(
                         orig.OriginalPostId?.Value,
                         origRepostCount,
                         false,
-                        null);  // OriginalPost — depth limited to 1
+                        null,
+                        ToMediaDtos(orig),
+                        originalAuthor?.DisplayName.Value ?? "Unknown",
+                        originalAuthor?.Handle.Display ?? "@unknown",
+                        ProfileImageUrl(originalAuthor));  // OriginalPost — depth limited to 1
                 }
             }
 
@@ -83,7 +90,11 @@ public sealed class GetPostWithConversationQueryHandler(
                 p.OriginalPostId?.Value,
                 repostCount,
                 isRepostedByMe,
-                originalPost);
+                originalPost,
+                ToMediaDtos(p),
+                author?.DisplayName.Value ?? "Unknown",
+                author?.Handle.Display ?? "@unknown",
+                ProfileImageUrl(author));
         }
 
         var conversationById = new Dictionary<Guid, PostConversationDto>();
@@ -101,4 +112,23 @@ public sealed class GetPostWithConversationQueryHandler(
 
         return conversationById[rootPost.Id.Value];
     }
+
+    private static List<PostMediaDto>? ToMediaDtos(Post post) =>
+        post.Media.Count == 0
+            ? null
+            : post.Media
+                .OrderBy(m => m.SortOrder)
+                .Select(m => new PostMediaDto(
+                    m.AssetId,
+                    m.Kind.ToString(),
+                    m.AltText,
+                    m.Width,
+                    m.Height,
+                    m.DurationMs,
+                    $"/api/post-media/{m.AssetId}",
+                    m.SortOrder))
+                .ToList();
+
+    private static string? ProfileImageUrl(User? user) =>
+        user?.ProfileImage is null ? null : $"/api/profile-images/{user.ProfileImage.AssetId}";
 }

@@ -1,0 +1,59 @@
+@using SocialDDD.Client.Services
+
+<article class="post">
+    <div class="post-header">
+        <div class="post-author-block">
+            <AuthorThumbnail DisplayName="@AuthorName" Handle="@AuthorHandle" ImageUrl="@Post.AuthorProfileImageUrl" />
+            <span class="post-time">@Post.PostedAt.ToLocalTime().ToString("g")</span>
+        </div>
+        @if (IsOwner && OnDelete.HasDelegate)
+        {
+            <div class="actions">
+                <button type="button" class="secondary compact" @onclick="() => OnDelete.InvokeAsync(Post.PostId)">Delete</button>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Post.Content))
+    {
+        <PostContent Content="@Post.Content" />
+    }
+
+    @if (Post.OriginalPost is not null)
+    {
+        <div class="embedded-post">
+            <span>Reposted by @AuthorHandle</span>
+            <PostContent Content="@Post.OriginalPost.Content" />
+        </div>
+    }
+
+    <PostMediaGrid Media="@Post.Media" />
+
+    <div class="post-actions" aria-label="Post actions">
+        <button type="button" class="heart-button @(Post.LikedByMe ? "liked" : "")" title="Like" @onclick="() => OnLike.InvokeAsync(Post.PostId)">
+            ♥ <span>@Post.LikeCount</span>
+        </button>
+        <button type="button" class="reply-button" title="Reply" @onclick="() => OnReply.InvokeAsync(Post.PostId)">
+            ↩ <span>@Post.ReplyCount</span>
+        </button>
+        <button type="button" class="repost-button @(Post.IsRepostedByMe ? "liked" : "")" title="Repost" @onclick="() => OnRepost.InvokeAsync(Post.PostId)">
+            ↻ <span>@Post.RepostCount</span>
+        </button>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public PostApiService.PostDto Post { get; set; } = null!;
+    [Parameter] public bool IsOwner { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+    [Parameter] public EventCallback<Guid> OnLike { get; set; }
+    [Parameter] public EventCallback<Guid> OnReply { get; set; }
+    [Parameter] public EventCallback<Guid> OnRepost { get; set; }
+
+    private string AuthorName => string.IsNullOrWhiteSpace(Post.AuthorDisplayName)
+        ? Post.AuthorId.ToString()
+        : Post.AuthorDisplayName;
+    private string AuthorHandle => string.IsNullOrWhiteSpace(Post.AuthorHandle)
+        ? $"@{Post.AuthorId.ToString()[..8]}"
+        : Post.AuthorHandle;
+}

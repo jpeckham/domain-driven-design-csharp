@@ -15,4 +15,7 @@ public sealed record PostDto(
     int RepostCount = 0,
     bool IsRepostedByMe = false,
     PostDto? OriginalPost = null,
-    IReadOnlyList<PostMediaDto>? Media = null);
+    IReadOnlyList<PostMediaDto>? Media = null,
+    string? AuthorDisplayName = null,
+    string? AuthorHandle = null,
+    string? AuthorProfileImageUrl = null);

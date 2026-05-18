@@ -1,0 +1,124 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using SocialDDD.Client.Services
+@inject PostApiService PostApi
+
+<div class="media-attachment-strip">
+    <label class="file-button">
+        <span>Attach media</span>
+        <InputFile OnChange="SelectFilesAsync" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" />
+    </label>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <p class="field-message">@_error</p>
+    }
+
+    @if (_items.Count > 0)
+    {
+        <div class="media-preview-strip">
+            @foreach (var item in _items)
+            {
+                <MediaUploadPreview
+                    FileName="@item.FileName"
+                    ContentType="@item.ContentType"
+                    Status="@item.Status"
+                    OnRemove="() => RemoveAsync(item.AssetId)" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const long MaxFileSize = 20 * 1024 * 1024;
+    private static readonly HashSet<string> AllowedTypes =
+    [
+        "image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4"
+    ];
+
+    private readonly List<UploadItem> _items = [];
+    private string? _error;
+
+    [Parameter] public List<Guid> AssetIds { get; set; } = [];
+    [Parameter] public EventCallback<List<Guid>> AssetIdsChanged { get; set; }
+
+    private async Task SelectFilesAsync(InputFileChangeEventArgs args)
+    {
+        _error = null;
+        var files = args.GetMultipleFiles(10).ToList();
+        if (files.Count == 0) return;
+
+        if (files.Count > 4)
+        {
+            _error = "Attach up to 4 images or 1 video.";
+            return;
+        }
+
+        if (files.Any(f => !AllowedTypes.Contains(f.ContentType)))
+        {
+            _error = "Use JPEG, PNG, WebP, GIF, or MP4.";
+            return;
+        }
+
+        var hasVideo = files.Any(f => f.ContentType == "video/mp4");
+        var hasImage = files.Any(f => f.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase));
+        if ((hasVideo && hasImage) || (hasVideo && files.Count > 1))
+        {
+            _error = "Attach either up to 4 images or 1 video.";
+            return;
+        }
+
+        foreach (var file in files)
+            await UploadAsync(file);
+    }
+
+    private async Task UploadAsync(IBrowserFile file)
+    {
+        var item = new UploadItem(Guid.NewGuid(), file.Name, file.ContentType, "Starting");
+        _items.Add(item);
+
+        if (file.Size > MaxFileSize)
+            item.Status = "Large file";
+
+        var session = await PostApi.BeginPostMediaUploadAsync(file.ContentType);
+        if (session is null)
+        {
+            item.Status = "Failed";
+            return;
+        }
+
+        item.AssetId = session.AssetId;
+        item.Status = "Uploading";
+        await using var stream = file.OpenReadStream(MaxFileSize);
+        if (!await PostApi.PutPostMediaBytesAsync(session.UploadUrl, stream, file.ContentType))
+        {
+            item.Status = "Failed";
+            return;
+        }
+
+        var completed = await PostApi.CompletePostMediaUploadAsync(session.AssetId, file.ContentType, file.Size);
+        if (completed is null)
+        {
+            item.Status = "Failed";
+            return;
+        }
+
+        item.Status = "Uploaded";
+        AssetIds = _items.Where(i => i.Status == "Uploaded").Select(i => i.AssetId).ToList();
+        await AssetIdsChanged.InvokeAsync(AssetIds);
+    }
+
+    private async Task RemoveAsync(Guid assetId)
+    {
+        _items.RemoveAll(i => i.AssetId == assetId);
+        AssetIds = _items.Where(i => i.Status == "Uploaded").Select(i => i.AssetId).ToList();
+        await AssetIdsChanged.InvokeAsync(AssetIds);
+    }
+
+    private sealed class UploadItem(Guid assetId, string fileName, string contentType, string status)
+    {
+        public Guid AssetId { get; set; } = assetId;
+        public string FileName { get; } = fileName;
+        public string ContentType { get; } = contentType;
+        public string Status { get; set; } = status;
+    }
+}

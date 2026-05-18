@@ -24,13 +24,60 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
         return results;
     }
 
-    public async Task<IReadOnlyList<Post>> GetFeedAsync(int skip, int limit, bool rootOnly = false, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Post>> GetByAuthorAsync(
+        UserId authorId, int limit, int offset, CancellationToken ct = default)
     {
-        var filter = rootOnly
-            ? Builders<Post>.Filter.And(
-                Builders<Post>.Filter.Eq(p => p.IsDeleted, false),
-                Builders<Post>.Filter.Eq("parentPostId", BsonNull.Value))
-            : Builders<Post>.Filter.Eq(p => p.IsDeleted, false);
+        var results = await context.Posts
+            .Find(p => p.AuthorId == authorId && !p.IsDeleted)
+            .SortByDescending(p => p.PostedAt)
+            .Skip(offset)
+            .Limit(limit)
+            .ToListAsync(ct);
+        return results;
+    }
+
+    public async Task<IReadOnlyList<Post>> GetFeedAsync(
+        int skip,
+        int limit,
+        bool rootOnly = false,
+        IReadOnlySet<Handle>? excludedHandles = null,
+        IReadOnlySet<Handle>? includedHandles = null,
+        CancellationToken ct = default)
+    {
+        var filters = new List<FilterDefinition<Post>>
+        {
+            Builders<Post>.Filter.Eq(p => p.IsDeleted, false)
+        };
+
+        if (rootOnly)
+            filters.Add(Builders<Post>.Filter.Eq("parentPostId", BsonNull.Value));
+
+        if (excludedHandles is { Count: > 0 })
+        {
+            var excludedHandleValues = excludedHandles.Select(h => h.Value).ToList();
+            var excludedAuthorIds = await context.Users
+                .Find(Builders<User>.Filter.In("handle", excludedHandleValues))
+                .Project(u => u.Id)
+                .ToListAsync(ct);
+
+            if (excludedAuthorIds.Count > 0)
+                filters.Add(Builders<Post>.Filter.Nin(p => p.AuthorId, excludedAuthorIds));
+        }
+
+        if (includedHandles is { Count: > 0 })
+        {
+            var includedHandleValues = includedHandles.Select(h => h.Value).ToList();
+            var includedAuthorIds = await context.Users
+                .Find(Builders<User>.Filter.In("handle", includedHandleValues))
+                .Project(u => u.Id)
+                .ToListAsync(ct);
+
+            filters.Add(includedAuthorIds.Count > 0
+                ? Builders<Post>.Filter.In(p => p.AuthorId, includedAuthorIds)
+                : Builders<Post>.Filter.Where(_ => false));
+        }
+
+        var filter = Builders<Post>.Filter.And(filters);
 
         var results = await context.Posts
             .Find(filter)
@@ -136,5 +183,43 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
             Builders<Post>.Filter.Eq(p => p.IsDeleted, false));
 
         return (int)await context.Posts.CountDocumentsAsync(filter, cancellationToken: ct);
+    }
+
+    public async Task<IReadOnlyList<Post>> SearchAsync(
+        string query,
+        Handle? requesterHandle,
+        IReadOnlySet<Handle> excludedHandles,
+        int limit,
+        int offset,
+        CancellationToken ct = default)
+    {
+        var filters = new List<FilterDefinition<Post>>
+        {
+            Builders<Post>.Filter.Text(query),
+            Builders<Post>.Filter.Eq(p => p.IsDeleted, false)
+        };
+
+        if (excludedHandles.Count > 0)
+        {
+            var excludedHandleValues = excludedHandles.Select(h => h.Value).ToList();
+            var excludedAuthorIds = await context.Users
+                .Find(Builders<User>.Filter.In("handle", excludedHandleValues))
+                .Project(u => u.Id)
+                .ToListAsync(ct);
+
+            if (excludedAuthorIds.Count > 0)
+                filters.Add(Builders<Post>.Filter.Nin(p => p.AuthorId, excludedAuthorIds));
+        }
+
+        var filter = Builders<Post>.Filter.And(filters);
+
+        var results = await context.Posts
+            .Find(filter)
+            .Sort(Builders<Post>.Sort.MetaTextScore("textScore").Descending(p => p.PostedAt))
+            .Skip(offset)
+            .Limit(limit)
+            .ToListAsync(ct);
+
+        return results;
     }
 }

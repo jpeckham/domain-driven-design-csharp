@@ -13,6 +13,7 @@
             <button type="submit" disabled="@_busy">Log In</button>
         </form>
 
+        <p class="switch"><a href="/forgot-password">Forgot password?</a></p>
         <p class="switch">Need an account? <a href="/register">Create one</a></p>
 
         @if (!string.IsNullOrEmpty(_error))
@@ -33,12 +34,30 @@
         _busy = true;
         _error = "";
 
-        var ok = await Auth.LoginAsync(_email, _password);
-        if (ok)
-            Nav.NavigateTo("/feed");
-        else
-            _error = "Invalid email or password.";
-
-        _busy = false;
+        try
+        {
+            var deviceId = await Auth.GetOrCreateDeviceIdAsync();
+            var result = await Auth.LoginWithDeviceAsync(_email, _password, deviceId);
+            if (result.IsSuccess)
+            {
+                Nav.NavigateTo("/feed");
+            }
+            else if (result.RequiresOtp)
+            {
+                Nav.NavigateTo($"/verify-device?email={Uri.EscapeDataString(_email)}&deviceId={Uri.EscapeDataString(deviceId)}");
+            }
+            else
+            {
+                _error = result.Error ?? "Invalid email or password.";
+            }
+        }
+        catch
+        {
+            _error = "Login failed. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
     }
 }

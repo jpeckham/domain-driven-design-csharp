@@ -35,9 +35,23 @@
     private async Task HandleRegister()
     {
         _busy = true;
-        _error = await Auth.RegisterAsync(_handle, _email, _password, _handle, _displayName) ?? "";
-        if (string.IsNullOrEmpty(_error))
-            Nav.NavigateTo("/feed");
-        _busy = false;
+        _error = "";
+
+        try
+        {
+            _error = await Auth.RegisterPendingAsync(_handle, _displayName, _email, _password) ?? "";
+            if (string.IsNullOrEmpty(_error))
+            {
+                Nav.NavigateTo($"/verify-registration?email={Uri.EscapeDataString(_email)}");
+            }
+        }
+        catch
+        {
+            _error = "Registration failed. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
     }
 }

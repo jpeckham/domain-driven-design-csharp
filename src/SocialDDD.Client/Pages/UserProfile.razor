@@ -1,0 +1,229 @@
+@page "/profile/{Handle}"
+@inject UserApiService UserApi
+@inject PostApiService PostApi
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<section class="workspace profile-page">
+    @if (_loading)
+    {
+        <p class="status">Loading profile...</p>
+    }
+    else if (_profile is null)
+    {
+        <section class="panel">
+            <p class="empty">@_error</p>
+        </section>
+    }
+    else
+    {
+        <section class="profile-header">
+            <div class="profile-photo">
+                @if (!string.IsNullOrWhiteSpace(_profile.ProfileImageUrl))
+                {
+                    <img src="@_profile.ProfileImageUrl" alt="" />
+                }
+                else
+                {
+                    <span>@ProfileInitial</span>
+                }
+            </div>
+
+            <div class="profile-summary">
+                @if (_profile.IsOwnProfile && _editingName)
+                {
+                    <form class="display-name-form" @onsubmit="SaveDisplayNameAsync">
+                        <input @bind="_displayNameDraft" maxlength="80" />
+                        <div class="actions">
+                            <button type="submit" class="compact" disabled="@_busy">Save</button>
+                            <button type="button" class="secondary compact" @onclick="CancelEdit" disabled="@_busy">Cancel</button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="profile-title-row">
+                        <div>
+                            <h1>@_profile.DisplayName</h1>
+                            <p>@_profile.Handle</p>
+                        </div>
+                        @if (_profile.IsOwnProfile)
+                        {
+                            <button type="button" class="secondary compact" @onclick="StartEdit">Edit name</button>
+                        }
+                    </div>
+                }
+
+                <div class="profile-counts">
+                    <span><strong>@_profile.FollowerCount</strong> followers</span>
+                    <span><strong>@_profile.FollowingCount</strong> following</span>
+                </div>
+
+                @if (_profile.IsOwnProfile)
+                {
+                    <ProfileImageUpload HasImage="@(!string.IsNullOrWhiteSpace(_profile.ProfileImageUrl))" OnChanged="ReloadProfileAsync" />
+                }
+                else
+                {
+                    <div class="actions profile-actions">
+                        <button type="button" @onclick="ToggleFollowAsync" disabled="@_busy">
+                            @(_profile.IsFollowedByMe ? "Unfollow" : "Follow")
+                        </button>
+                        <button type="button" class="@(_profile.IsBlockedByMe ? "secondary" : "danger")" @onclick="ToggleBlockAsync" disabled="@_busy">
+                            @(_profile.IsBlockedByMe ? "Unblock" : "Block")
+                        </button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <p class="field-message">@_error</p>
+                }
+            </div>
+        </section>
+
+        <section class="feed profile-posts">
+            <div class="feed-title-row">
+                <h2>Posts</h2>
+            </div>
+
+            @if (_posts.Count == 0)
+            {
+                <p class="empty">No posts yet.</p>
+            }
+            else
+            {
+                @foreach (var post in _posts)
+                {
+                    <PostCard Post="post" IsOwner="@(_currentUserId == post.AuthorId)" OnDelete="DeletePostAsync" />
+                }
+            }
+
+            @if (_hasMore)
+            {
+                <button type="button" class="secondary load-more" @onclick="LoadMoreAsync" disabled="@_busy">Load more</button>
+            }
+        </section>
+    }
+</section>
+
+@code {
+    private const int PageSize = 10;
+    private UserApiService.UserProfileDto? _profile;
+    private List<PostApiService.PostDto> _posts = [];
+    private Guid? _currentUserId;
+    private bool _loading = true;
+    private bool _busy;
+    private bool _editingName;
+    private bool _hasMore;
+    private string _displayNameDraft = "";
+    private string? _error;
+
+    [Parameter] public string Handle { get; set; } = "";
+
+    private string ProfileInitial => string.IsNullOrWhiteSpace(_profile?.DisplayName)
+        ? "@"
+        : _profile.DisplayName.Trim()[0].ToString().ToUpperInvariant();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        await Auth.InitializeAsync();
+        _currentUserId = await Auth.GetCurrentUserIdAsync();
+        await ReloadProfileAsync();
+        await LoadPostsAsync(reset: true);
+        _loading = false;
+    }
+
+    private async Task ReloadProfileAsync()
+    {
+        try
+        {
+            _profile = await UserApi.GetUserProfileAsync(Handle);
+            _displayNameDraft = _profile?.DisplayName ?? "";
+        }
+        catch (HttpRequestException)
+        {
+            _profile = null;
+            _error = "Profile not found.";
+        }
+    }
+
+    private async Task LoadPostsAsync(bool reset)
+    {
+        if (_profile is null) return;
+        var offset = reset ? 0 : _posts.Count;
+        var posts = await PostApi.GetPostsByUserAsync(_profile.UserId, PageSize, offset);
+        if (reset)
+            _posts = posts;
+        else
+            _posts.AddRange(posts);
+        _hasMore = posts.Count == PageSize;
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        _busy = true;
+        await LoadPostsAsync(reset: false);
+        _busy = false;
+    }
+
+    private void StartEdit()
+    {
+        _displayNameDraft = _profile?.DisplayName ?? "";
+        _editingName = true;
+    }
+
+    private void CancelEdit() => _editingName = false;
+
+    private async Task SaveDisplayNameAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_displayNameDraft)) return;
+        _busy = true;
+        _error = null;
+        if (!await UserApi.UpdateDisplayNameAsync(_displayNameDraft))
+        {
+            _error = "Unable to update display name.";
+        }
+        else
+        {
+            _editingName = false;
+            await ReloadProfileAsync();
+        }
+        _busy = false;
+    }
+
+    private async Task ToggleFollowAsync()
+    {
+        if (_profile is null) return;
+        _busy = true;
+        var ok = _profile.IsFollowedByMe
+            ? await UserApi.UnfollowUserAsync(_profile.Handle)
+            : await UserApi.FollowUserAsync(_profile.Handle);
+        if (!ok)
+            _error = "Unable to update follow state.";
+        await ReloadProfileAsync();
+        _busy = false;
+    }
+
+    private async Task ToggleBlockAsync()
+    {
+        if (_profile is null) return;
+        _busy = true;
+        var ok = _profile.IsBlockedByMe
+            ? await UserApi.UnblockUserAsync(_profile.Handle)
+            : await UserApi.BlockUserAsync(_profile.Handle);
+        if (!ok)
+            _error = "Unable to update block state.";
+        await ReloadProfileAsync();
+        _busy = false;
+    }
+
+    private async Task DeletePostAsync(Guid postId)
+    {
+        if (!await PostApi.DeleteAsync(postId))
+            _error = "Unable to delete post.";
+        await LoadPostsAsync(reset: true);
+    }
+}

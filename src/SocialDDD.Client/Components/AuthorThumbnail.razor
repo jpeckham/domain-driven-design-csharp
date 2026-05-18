@@ -1,0 +1,27 @@
+<a class="author-summary" href="@ProfileHref" title="@DisplayName">
+    <span class="author-thumb">
+        @if (!string.IsNullOrWhiteSpace(ImageUrl))
+        {
+            <img src="@ImageUrl" alt="" />
+        }
+        else
+        {
+            <span>@Initial</span>
+        }
+    </span>
+    <span class="author-text">
+        <span class="post-author-name">@DisplayName</span>
+        <span class="post-author-handle">@Handle</span>
+    </span>
+</a>
+
+@code {
+    [Parameter] public string? DisplayName { get; set; }
+    [Parameter] public string? Handle { get; set; }
+    [Parameter] public string? ImageUrl { get; set; }
+
+    private string ProfileHref => $"/profile/{(Handle ?? "").TrimStart('@')}";
+    private string Initial => string.IsNullOrWhiteSpace(DisplayName)
+        ? "@"
+        : DisplayName.Trim()[0].ToString().ToUpperInvariant();
+}

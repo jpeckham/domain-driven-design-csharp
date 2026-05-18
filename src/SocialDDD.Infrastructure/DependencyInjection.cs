@@ -3,12 +3,16 @@ using Microsoft.Extensions.DependencyInjection;
 using SocialDDD.Application.Interfaces;
 using SocialDDD.Application.Posts;
 using SocialDDD.Application.Users.Commands;
+using SocialDDD.Domain.Blocks;
+using SocialDDD.Domain.Follows;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
 using SocialDDD.Infrastructure.Auth;
 using SocialDDD.Infrastructure.Emails;
 using SocialDDD.Infrastructure.Events;
 using SocialDDD.Infrastructure.Persistence;
+using SocialDDD.Infrastructure.Persistence.Blocks;
+using SocialDDD.Infrastructure.Persistence.Follows;
 using SocialDDD.Infrastructure.Persistence.OtpCodes;
 using SocialDDD.Infrastructure.Persistence.PasswordResetTokens;
 using SocialDDD.Infrastructure.Persistence.Posts;
@@ -33,6 +37,8 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
+        services.AddScoped<IBlockRepository, MongoDbBlockRepository>();
+        services.AddScoped<IFollowRepository, MongoDbFollowRepository>();
 
         // Verification code repository: "MongoDb" or "InMemory" (default)
         var verificationCodeRepo = configuration["Features:EmailVerificationRepository"] ?? "InMemory";

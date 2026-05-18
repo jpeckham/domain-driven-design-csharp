@@ -1,0 +1,17 @@
+<div class="media-preview-item">
+    <div class="media-preview-thumb">@Icon</div>
+    <div>
+        <strong>@FileName</strong>
+        <span>@Status</span>
+    </div>
+    <button type="button" class="secondary compact" @onclick="OnRemove">×</button>
+</div>
+
+@code {
+    [Parameter] public string FileName { get; set; } = "";
+    [Parameter] public string ContentType { get; set; } = "";
+    [Parameter] public string Status { get; set; } = "";
+    [Parameter] public EventCallback OnRemove { get; set; }
+
+    private string Icon => ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ? "VID" : "IMG";
+}

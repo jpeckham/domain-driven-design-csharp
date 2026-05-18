@@ -1,6 +1,8 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using SocialDDD.Domain.Blocks;
+using SocialDDD.Domain.Follows;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
 
@@ -20,6 +22,8 @@ internal static class BsonMappings
         // of that type — including the Id property inherited from Entity<TId> —
         // without needing per-member SetSerializer calls inside the class map.
         BsonSerializer.RegisterSerializer(new UserIdSerializer());
+        BsonSerializer.RegisterSerializer(new BlockIdSerializer());
+        BsonSerializer.RegisterSerializer(new FollowIdSerializer());
         BsonSerializer.RegisterSerializer(new PostIdSerializer());
         BsonSerializer.RegisterSerializer(new UsernameSerializer());
         BsonSerializer.RegisterSerializer(new EmailSerializer());
@@ -84,12 +88,31 @@ internal static class BsonMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
+            cm.MapMember(p => p.Content).SetElementName("content");
             cm.MapMember(p => p.LikedBy).SetElementName("likedBy");
             cm.MapMember(p => p.ParentPostId).SetElementName("parentPostId");
             cm.MapMember(p => p.OriginalPostId).SetElementName("originalPostId");
             cm.MapMember(p => p.Mentions).SetElementName("mentions");
             cm.MapMember(p => p.Hashtags).SetElementName("hashtags");
             cm.MapMember(p => p.Media).SetElementName("media");
+        });
+
+        BsonClassMap.RegisterClassMap<Block>(cm =>
+        {
+            cm.AutoMap();
+            cm.SetIgnoreExtraElements(true);
+            cm.MapMember(b => b.BlockerHandle).SetElementName("blockerHandle");
+            cm.MapMember(b => b.BlockedHandle).SetElementName("blockedHandle");
+            cm.MapMember(b => b.BlockedAt).SetElementName("blockedAt");
+        });
+
+        BsonClassMap.RegisterClassMap<Follow>(cm =>
+        {
+            cm.AutoMap();
+            cm.SetIgnoreExtraElements(true);
+            cm.MapMember(f => f.FollowerHandle).SetElementName("followerHandle");
+            cm.MapMember(f => f.FollowedHandle).SetElementName("followedHandle");
+            cm.MapMember(f => f.FollowedAt).SetElementName("followedAt");
         });
     }
 }
@@ -102,6 +125,24 @@ internal sealed class UserIdSerializer : SerializerBase<UserId>
         => UserId.From(Guid.Parse(ctx.Reader.ReadString()));
 
     public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, UserId value)
+        => ctx.Writer.WriteString(value.Value.ToString());
+}
+
+internal sealed class BlockIdSerializer : SerializerBase<BlockId>
+{
+    public override BlockId Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
+        => BlockId.From(Guid.Parse(ctx.Reader.ReadString()));
+
+    public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, BlockId value)
+        => ctx.Writer.WriteString(value.Value.ToString());
+}
+
+internal sealed class FollowIdSerializer : SerializerBase<FollowId>
+{
+    public override FollowId Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
+        => FollowId.From(Guid.Parse(ctx.Reader.ReadString()));
+
+    public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, FollowId value)
         => ctx.Writer.WriteString(value.Value.ToString());
 }
 

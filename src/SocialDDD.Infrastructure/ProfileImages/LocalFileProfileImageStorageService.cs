@@ -20,6 +20,9 @@ public sealed class LocalFileProfileImageStorageService(string baseDirectory) : 
         await data.CopyToAsync(file, ct);
     }
 
+    public Task<bool> ExistsAsync(string storageKey, CancellationToken ct) =>
+        Task.FromResult(File.Exists(FilePath(storageKey)));
+
     public Task<Stream> LoadAsync(string storageKey, CancellationToken ct)
     {
         var path = FilePath(storageKey);

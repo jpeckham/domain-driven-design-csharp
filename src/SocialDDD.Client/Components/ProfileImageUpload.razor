@@ -1,0 +1,92 @@
+@using Microsoft.AspNetCore.Components.Forms
+@inject UserApiService UserApi
+
+<div class="profile-image-upload">
+    <label class="file-button">
+        <span>Upload photo</span>
+        <InputFile OnChange="UploadAsync" accept="image/png,image/jpeg,image/webp" />
+    </label>
+    @if (HasImage)
+    {
+        <button type="button" class="secondary compact" @onclick="RemoveAsync" disabled="@_busy">Remove photo</button>
+    }
+    @if (_busy)
+    {
+        <span class="upload-progress">Uploading...</span>
+    }
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <p class="field-message">@_error</p>
+    }
+</div>
+
+@code {
+    private const long MaxUploadBytes = 5 * 1024 * 1024;
+    private bool _busy;
+    private string? _error;
+
+    [Parameter] public bool HasImage { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private async Task UploadAsync(InputFileChangeEventArgs args)
+    {
+        _error = null;
+        var file = args.File;
+        if (file.Size > MaxUploadBytes)
+        {
+            _error = "Choose an image under 5 MB.";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
+            var session = await UserApi.BeginProfileImageUploadAsync(contentType);
+            if (session is null)
+            {
+                _error = "Unable to start upload.";
+                return;
+            }
+
+            await using var stream = file.OpenReadStream(MaxUploadBytes);
+            if (!await UserApi.PutProfileImageAsync(session.UploadUrl, stream, contentType))
+            {
+                _error = "Unable to upload image.";
+                return;
+            }
+
+            if (!await UserApi.CompleteProfileImageUploadAsync(session.AssetId, contentType, file.Size))
+            {
+                _error = "Unable to save image.";
+                return;
+            }
+
+            await OnChanged.InvokeAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RemoveAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            if (!await UserApi.RemoveProfileImageAsync())
+            {
+                _error = "Unable to remove image.";
+                return;
+            }
+
+            await OnChanged.InvokeAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

@@ -18,7 +18,8 @@ public sealed class PostsController(
     CreateReplyCommandHandler createReplyHandler,
     CreateRepostCommandHandler createRepostHandler,
     DeleteRepostCommandHandler deleteRepostHandler,
-    GetPostWithConversationQueryHandler conversationHandler) : ControllerBase
+    GetPostWithConversationQueryHandler conversationHandler,
+    SearchPostsQueryHandler searchPostsHandler) : ControllerBase
 {
     [Authorize]
     [HttpPost]
@@ -145,19 +146,65 @@ public sealed class PostsController(
         [FromQuery] int skip = 0,
         [FromQuery] int limit = 20,
         [FromQuery] bool rootOnly = false,
+        [FromQuery] bool followingOnly = false,
         CancellationToken ct = default)
     {
         var requesterId = GetRequesterId();
-        var posts = await postService.GetFeedAsync(skip, limit, requesterId, rootOnly, ct);
+        var posts = await postService.GetFeedAsync(skip, limit, requesterId, rootOnly, followingOnly, ct);
         return Ok(posts);
     }
 
-    [HttpGet("by-user/{userId:guid}")]
-    public async Task<IActionResult> GetByUser(Guid userId, CancellationToken ct)
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery(Name = "q")] string? q,
+        [FromQuery] int limit = 20,
+        [FromQuery] int offset = 0,
+        CancellationToken ct = default)
     {
         var requesterId = GetRequesterId();
-        var posts = await postService.GetByAuthorAsync(userId, requesterId, ct);
+        var requesterHandle = requesterId.HasValue
+            ? await postService.GetHandleByUserIdAsync(requesterId.Value, ct)
+            : null;
+
+        try
+        {
+            var query = new SearchPostsQuery(
+                q,
+                requesterHandle is not null ? new SocialDDD.Domain.Users.Handle(requesterHandle) : null,
+                limit,
+                offset);
+            var results = await searchPostsHandler.HandleAsync(query, ct);
+            return Ok(results);
+        }
+        catch (DomainValidationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("by-user/{userId:guid}")]
+    public async Task<IActionResult> GetByUser(Guid userId, [FromQuery] int limit = 20, [FromQuery] int offset = 0, CancellationToken ct = default)
+    {
+        var requesterId = GetRequesterId();
+        var posts = await postService.GetByAuthorAsync(userId, limit, offset, requesterId, ct);
         return Ok(posts);
+    }
+
+    [HttpGet("by-handle/{handle}")]
+    public async Task<IActionResult> GetByHandle(
+        string handle,
+        [FromQuery] int limit = 20,
+        [FromQuery] int offset = 0,
+        CancellationToken ct = default)
+    {
+        var requesterId = GetRequesterId();
+        try
+        {
+            var posts = await postService.GetByAuthorHandleAsync(handle, limit, offset, requesterId, ct);
+            return Ok(posts);
+        }
+        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainException ex) { return NotFound(new { error = ex.Message }); }
     }
 
     [Authorize]

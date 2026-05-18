@@ -1,0 +1,48 @@
+@foreach (var segment in Segments)
+{
+    if (segment.Kind == SegmentKind.Mention)
+    {
+        <a class="post-token" href="/profile/@segment.Value.TrimStart('@')">@segment.Value</a>
+    }
+    else if (segment.Kind == SegmentKind.Hashtag)
+    {
+        <a class="post-token" href="/feed?q=@Uri.EscapeDataString(segment.Value)">@segment.Value</a>
+    }
+    else
+    {
+        @segment.Value
+    }
+}
+
+@code {
+    [Parameter] public string? Content { get; set; }
+
+    private IReadOnlyList<Segment> Segments => Parse(Content ?? "");
+
+    private static IReadOnlyList<Segment> Parse(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return [];
+
+        var matches = System.Text.RegularExpressions.Regex.Matches(
+            content,
+            @"(?<token>[@#][a-zA-Z0-9_]+)");
+        var segments = new List<Segment>();
+        var index = 0;
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            if (match.Index > index)
+                segments.Add(new Segment(SegmentKind.Text, content[index..match.Index]));
+            var value = match.Value;
+            segments.Add(new Segment(value[0] == '@' ? SegmentKind.Mention : SegmentKind.Hashtag, value));
+            index = match.Index + match.Length;
+        }
+
+        if (index < content.Length)
+            segments.Add(new Segment(SegmentKind.Text, content[index..]));
+
+        return segments;
+    }
+
+    private sealed record Segment(SegmentKind Kind, string Value);
+    private enum SegmentKind { Text, Mention, Hashtag }
+}

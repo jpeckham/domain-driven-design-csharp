@@ -22,10 +22,13 @@ public sealed class CompleteProfileImageUploadCommandHandler(
         var user = await userRepository.GetByIdAsync(UserId.From(command.UserId), ct)
             ?? throw new DomainException($"User {command.UserId} not found.");
 
+        var storageKey = command.AssetId.ToString();
+        if (!await storageService.ExistsAsync(storageKey, ct))
+            throw new DomainException("Uploaded profile image was not found.");
+
         if (user.ProfileImage is { } oldImage)
             await storageService.DeleteAsync(oldImage.StorageKey, ct);
 
-        var storageKey = command.AssetId.ToString();
         var profileImage = new ProfileImage(
             command.AssetId,
             storageKey,

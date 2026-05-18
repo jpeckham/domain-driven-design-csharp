@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using SocialDDD.Application.Posts;
 using SocialDDD.Application.Posts.Commands;
 using SocialDDD.Application.Posts.Queries;
+using SocialDDD.Application.Follows;
 using SocialDDD.Application.Users;
 using SocialDDD.Application.Users.Commands;
 using SocialDDD.Application.Users.Queries;
@@ -15,6 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<FollowService>();
 builder.Services.AddScoped<BeginProfileImageUploadCommandHandler>();
 builder.Services.AddScoped<CompleteProfileImageUploadCommandHandler>();
 builder.Services.AddScoped<RemoveProfileImageCommandHandler>();
@@ -26,6 +28,7 @@ builder.Services.AddScoped<CreateReplyCommandHandler>();
 builder.Services.AddScoped<CreateRepostCommandHandler>();
 builder.Services.AddScoped<DeleteRepostCommandHandler>();
 builder.Services.AddScoped<GetPostWithConversationQueryHandler>();
+builder.Services.AddScoped<SearchPostsQueryHandler>();
 builder.Services.AddScoped<BeginPostMediaUploadCommandHandler>();
 builder.Services.AddScoped<CompletePostMediaUploadCommandHandler>();
 

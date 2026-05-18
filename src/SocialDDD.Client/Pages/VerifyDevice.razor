@@ -1,0 +1,74 @@
+@page "/verify-device"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<section class="auth">
+    <div class="auth-panel">
+        <h1>Verify Device</h1>
+        <p>Enter the one-time passcode sent to your email address.</p>
+
+        <form @onsubmit="HandleVerify">
+            <input type="email" value="@Email" readonly />
+            <input inputmode="numeric" maxlength="6" @bind="_otp" placeholder="000000" />
+            <label class="check">
+                <input type="checkbox" @bind="_rememberDevice" />
+                Remember this device
+            </label>
+            <button type="submit" disabled="@_busy">Verify</button>
+        </form>
+
+        <p class="switch"><a href="/login">Back to login</a></p>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="field-message">@_error</p>
+        }
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Email { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? DeviceId { get; set; }
+
+    private string _otp = "";
+    private string _error = "";
+    private bool _rememberDevice = true;
+    private bool _busy;
+
+    private async Task HandleVerify()
+    {
+        _busy = true;
+        _error = "";
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(DeviceId))
+            {
+                _error = "Login details are missing. Start again from the login page.";
+            }
+            else if (_otp.Trim().Length != 6)
+            {
+                _error = "Enter the 6-digit one-time passcode.";
+            }
+            else
+            {
+                _error = await Auth.VerifyDeviceOtpAsync(Email, DeviceId, _otp.Trim(), _rememberDevice) ?? "";
+                if (string.IsNullOrEmpty(_error))
+                {
+                    Nav.NavigateTo("/feed");
+                }
+            }
+        }
+        catch
+        {
+            _error = "Verification failed. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
