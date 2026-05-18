@@ -53,6 +53,10 @@ public sealed class CreateReplyCommandHandler(
             reply.ParentPostId?.Value,
             0,
             reply.Mentions.Select(h => h.Value).ToList(),
-            reply.Hashtags.ToList());
+            reply.Hashtags.ToList(),
+            null,   // OriginalPostId — replies are not reposts
+            0,      // RepostCount
+            false,  // IsRepostedByMe
+            null);  // OriginalPost
     }
 }

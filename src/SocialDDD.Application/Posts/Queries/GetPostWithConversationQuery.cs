@@ -64,7 +64,8 @@ public sealed class GetPostWithConversationQueryHandler(
                         orig.Hashtags.ToList(),
                         orig.OriginalPostId?.Value,
                         origRepostCount,
-                        false);
+                        false,
+                        null);  // OriginalPost — depth limited to 1
                 }
             }
 
