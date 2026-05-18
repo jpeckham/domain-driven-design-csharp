@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using SocialDDD.Application.Interfaces;
 using SocialDDD.Application.Users.DTOs;
 using SocialDDD.Domain.Exceptions;
@@ -44,7 +45,7 @@ public sealed class RegisterPendingUserCommand(
 
     private static string GenerateCode()
     {
-        var value = Random.Shared.Next(0, 1_000_000);
+        var value = RandomNumberGenerator.GetInt32(0, 1_000_000);
         return value.ToString("D6");
     }
 }

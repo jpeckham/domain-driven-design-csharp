@@ -6,9 +6,6 @@ using SocialDDD.Domain.Exceptions;
 
 namespace SocialDDD.Api.Controllers;
 
-/// <summary>
-/// POST /api/accounts — dev-convenience path: creates an Active user immediately (no email verification).
-/// </summary>
 [ApiController]
 [Route("api/accounts")]
 public sealed class AccountsController(UserService userService) : ControllerBase

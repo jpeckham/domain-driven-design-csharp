@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using SocialDDD.Application.Interfaces;
 using SocialDDD.Application.Users.DTOs;
 using SocialDDD.Domain.Exceptions;
@@ -24,8 +25,13 @@ public sealed class VerifyRegistrationCommand(
         if (stored.IsExpired(DateTimeOffset.UtcNow))
             throw new DomainException("Verification code has expired. Please register again.");
 
-        if (stored.Code != request.Code)
+        var storedBytes = System.Text.Encoding.UTF8.GetBytes(stored.Code);
+        var providedBytes = System.Text.Encoding.UTF8.GetBytes(request.Code);
+        if (!CryptographicOperations.FixedTimeEquals(storedBytes, providedBytes))
             throw new DomainException("Invalid verification code.");
+
+        if (user.Status == UserStatus.Active)
+            throw new DomainValidationException("Account is already verified.");
 
         user.Activate();
 

@@ -63,7 +63,7 @@ public sealed class User : AggregateRoot<UserId>
     public void Activate()
     {
         if (Status == UserStatus.Active)
-            throw new DomainException("User is already active.");
+            throw new DomainValidationException("User is already active.");
         Status = UserStatus.Active;
         RaiseDomainEvent(new UserActivated(Id));
     }

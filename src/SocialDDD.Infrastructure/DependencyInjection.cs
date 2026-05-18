@@ -32,7 +32,7 @@ public static class DependencyInjection
         if (verificationCodeRepo.Equals("MongoDb", StringComparison.OrdinalIgnoreCase))
             services.AddScoped<IVerificationCodeRepository, MongoDbVerificationCodeRepository>();
         else
-            services.AddSingleton<IVerificationCodeRepository, InMemoryVerificationCodeRepository>();
+            services.AddScoped<IVerificationCodeRepository, InMemoryVerificationCodeRepository>();
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();

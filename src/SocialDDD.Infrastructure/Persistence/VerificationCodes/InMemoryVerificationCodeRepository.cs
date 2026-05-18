@@ -5,7 +5,7 @@ namespace SocialDDD.Infrastructure.Persistence.VerificationCodes;
 
 internal sealed class InMemoryVerificationCodeRepository : IVerificationCodeRepository
 {
-    private readonly ConcurrentDictionary<string, VerificationCode> _store = new();
+    private static readonly ConcurrentDictionary<string, VerificationCode> _store = new();
 
     public Task SaveAsync(UserId userId, VerificationCode code, CancellationToken ct = default)
     {

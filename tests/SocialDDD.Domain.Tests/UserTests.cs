@@ -28,7 +28,7 @@ public class UserTests
     }
 
     [Fact]
-    public void Register_EmptyUsername_ThrowsDomainException()
+    public void Register_EmptyUsername_ThrowsDomainValidationException()
     {
         var act = () => User.Register(
             new Username(""),
@@ -37,11 +37,11 @@ public class UserTests
             new Handle("alice"),
             new DisplayName("Alice Smith"));
 
-        act.Should().Throw<DomainException>();
+        act.Should().Throw<DomainValidationException>();
     }
 
     [Fact]
-    public void Register_InvalidEmail_ThrowsDomainException()
+    public void Register_InvalidEmail_ThrowsDomainValidationException()
     {
         var act = () => User.Register(
             new Username("alice"),
@@ -50,7 +50,7 @@ public class UserTests
             new Handle("alice"),
             new DisplayName("Alice Smith"));
 
-        act.Should().Throw<DomainException>();
+        act.Should().Throw<DomainValidationException>();
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class UserTests
     }
 
     [Fact]
-    public void Activate_WhenAlreadyActive_ThrowsDomainException()
+    public void Activate_WhenAlreadyActive_ThrowsDomainValidationException()
     {
         var user = User.RegisterImmediate(
             new Username("alice"),
@@ -166,6 +166,6 @@ public class UserTests
             new DisplayName("Alice Smith"));
 
         var act = () => user.Activate();
-        act.Should().Throw<DomainException>();
+        act.Should().Throw<DomainValidationException>();
     }
 }
