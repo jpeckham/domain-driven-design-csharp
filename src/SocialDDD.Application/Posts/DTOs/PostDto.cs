@@ -14,4 +14,5 @@ public sealed record PostDto(
     Guid? OriginalPostId = null,
     int RepostCount = 0,
     bool IsRepostedByMe = false,
-    PostDto? OriginalPost = null);
+    PostDto? OriginalPost = null,
+    IReadOnlyList<PostMediaDto>? Media = null);
