@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SocialDDD.Application.Posts;
+using SocialDDD.Application.Posts.Commands;
 using SocialDDD.Application.Users;
 using SocialDDD.Infrastructure;
 
@@ -12,6 +13,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<PostService>();
+builder.Services.AddScoped<LikePostCommandHandler>();
+builder.Services.AddScoped<UnlikePostCommandHandler>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var secret = jwtSection["Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");

@@ -12,6 +12,11 @@ public sealed class Post : AggregateRoot<PostId>
     public DateTime PostedAt { get; private set; }
     public bool IsDeleted { get; private set; }
 
+    // Handle normalizes to lowercase in its constructor, so equality works correctly.
+    public HashSet<Handle> LikedBy { get; private set; } = new();
+
+    public int LikeCount => LikedBy.Count;
+
     private Post() { }
 
     public static Post Create(UserId authorId, PostContent content)
@@ -35,5 +40,24 @@ public sealed class Post : AggregateRoot<PostId>
 
         IsDeleted = true;
         RaiseDomainEvent(new PostDeleted(Id, AuthorId));
+    }
+
+    public void Like(Handle byHandle)
+    {
+        if (IsDeleted)
+            throw new DomainValidationException("Cannot like a deleted post.");
+
+        if (!LikedBy.Add(byHandle))
+            throw new DomainValidationException($"Post is already liked by {byHandle.Display}.");
+
+        RaiseDomainEvent(new PostLiked(Id, byHandle));
+    }
+
+    public void Unlike(Handle byHandle)
+    {
+        if (!LikedBy.Remove(byHandle))
+            throw new DomainValidationException($"Post is not liked by {byHandle.Display}.");
+
+        RaiseDomainEvent(new PostUnliked(Id, byHandle));
     }
 }

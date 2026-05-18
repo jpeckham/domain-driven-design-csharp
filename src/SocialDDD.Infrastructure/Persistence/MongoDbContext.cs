@@ -68,5 +68,11 @@ public sealed class MongoDbContext
             new CreateIndexOptions { ExpireAfter = TimeSpan.Zero, Name = "passwordReset_expiresAt_ttl" });
 
         PasswordResetTokens.Indexes.CreateOne(passwordResetTtlIndex);
+
+        var postLikedByIndex = new CreateIndexModel<Post>(
+            Builders<Post>.IndexKeys.Ascending("likedBy"),
+            new CreateIndexOptions { Background = true, Name = "likedBy_asc" });
+
+        Posts.Indexes.CreateOne(postLikedByIndex);
     }
 }

@@ -39,4 +39,26 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
             p => p.Id == post.Id,
             post,
             cancellationToken: ct);
+
+    public Task AddLikeAsync(PostId postId, Handle handle, CancellationToken ct = default)
+    {
+        var filter = Builders<Post>.Filter.Eq(p => p.Id, postId);
+        var update = Builders<Post>.Update.AddToSet("likedBy", handle.Value);
+        return context.Posts.UpdateOneAsync(filter, update, cancellationToken: ct);
+    }
+
+    public Task RemoveLikeAsync(PostId postId, Handle handle, CancellationToken ct = default)
+    {
+        var filter = Builders<Post>.Filter.Eq(p => p.Id, postId);
+        var update = Builders<Post>.Update.Pull("likedBy", handle.Value);
+        return context.Posts.UpdateOneAsync(filter, update, cancellationToken: ct);
+    }
+
+    public async Task<bool> IsLikedByAsync(PostId postId, Handle handle, CancellationToken ct = default)
+    {
+        var filter = Builders<Post>.Filter.And(
+            Builders<Post>.Filter.Eq(p => p.Id, postId),
+            Builders<Post>.Filter.AnyEq("likedBy", handle.Value));
+        return await context.Posts.CountDocumentsAsync(filter, cancellationToken: ct) > 0;
+    }
 }

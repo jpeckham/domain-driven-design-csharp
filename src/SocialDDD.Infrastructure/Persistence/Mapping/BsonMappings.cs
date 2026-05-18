@@ -42,6 +42,7 @@ internal static class BsonMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
+            cm.MapMember(p => p.LikedBy).SetElementName("likedBy");
         });
     }
 }

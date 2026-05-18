@@ -40,18 +40,41 @@ public sealed class PostService(
         await eventDispatcher.DispatchAsync(post.PopDomainEvents(), ct);
     }
 
-    public async Task<IReadOnlyList<PostDto>> GetFeedAsync(int skip, int limit, CancellationToken ct = default)
+    public async Task<IReadOnlyList<PostDto>> GetFeedAsync(
+        int skip, int limit, string? requesterHandle = null, CancellationToken ct = default)
     {
         var posts = await postRepository.GetFeedAsync(skip, limit, ct);
-        return posts.Select(ToDto).ToList();
+        return await ToDtosAsync(posts, requesterHandle, ct);
     }
 
-    public async Task<IReadOnlyList<PostDto>> GetByAuthorAsync(Guid userId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<PostDto>> GetByAuthorAsync(
+        Guid userId, string? requesterHandle = null, CancellationToken ct = default)
     {
         var posts = await postRepository.GetByAuthorAsync(UserId.From(userId), ct);
-        return posts.Select(ToDto).ToList();
+        return await ToDtosAsync(posts, requesterHandle, ct);
+    }
+
+    public async Task<string?> GetHandleByUserIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await userRepository.GetByIdAsync(UserId.From(userId), ct);
+        return user?.Handle.Value;
+    }
+
+    private async Task<IReadOnlyList<PostDto>> ToDtosAsync(
+        IReadOnlyList<Post> posts, string? requesterHandle, CancellationToken ct)
+    {
+        Handle? handle = requesterHandle is not null ? new Handle(requesterHandle) : null;
+
+        var dtos = new List<PostDto>(posts.Count);
+        foreach (var post in posts)
+        {
+            bool likedByMe = handle is not null
+                && await postRepository.IsLikedByAsync(post.Id, handle, ct);
+            dtos.Add(new PostDto(post.Id.Value, post.AuthorId.Value, post.Content.Value, post.PostedAt, post.LikeCount, likedByMe));
+        }
+        return dtos;
     }
 
     private static PostDto ToDto(Post post) =>
-        new(post.Id.Value, post.AuthorId.Value, post.Content.Value, post.PostedAt);
+        new(post.Id.Value, post.AuthorId.Value, post.Content.Value, post.PostedAt, post.LikeCount, false);
 }

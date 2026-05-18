@@ -9,6 +9,7 @@ namespace SocialDDD.Domain.Tests;
 public class PostTests
 {
     private static UserId AnyAuthor() => UserId.New();
+    private static Handle AnyHandle(string value = "alice") => new(value);
 
     [Fact]
     public void Create_ValidArgs_CreatesPostAndRaisesEvent()
@@ -64,5 +65,90 @@ public class PostTests
         var act = () => Post.Create(AnyAuthor(), new PostContent(""));
 
         act.Should().Throw<DomainException>();
+    }
+
+    // ---- Like tests ----
+
+    [Fact]
+    public void Like_FirstLike_AddsToLikedByAndRaisesEvent()
+    {
+        var post = Post.Create(AnyAuthor(), new PostContent("Hi"));
+        post.PopDomainEvents();
+        var handle = AnyHandle("bob");
+
+        post.Like(handle);
+
+        post.LikedBy.Should().Contain(handle);
+        post.LikeCount.Should().Be(1);
+        post.PopDomainEvents().Should().ContainSingle()
+            .Which.Should().BeOfType<PostLiked>()
+            .Which.LikedByHandle.Should().Be(handle);
+    }
+
+    [Fact]
+    public void Like_SameUserLikesTwice_ThrowsDomainValidationException()
+    {
+        var post = Post.Create(AnyAuthor(), new PostContent("Hi"));
+        var handle = AnyHandle("bob");
+        post.Like(handle);
+
+        var act = () => post.Like(handle);
+
+        act.Should().Throw<DomainValidationException>();
+    }
+
+    [Fact]
+    public void Unlike_AfterLike_RemovesFromLikedByAndRaisesEvent()
+    {
+        var post = Post.Create(AnyAuthor(), new PostContent("Hi"));
+        var handle = AnyHandle("bob");
+        post.Like(handle);
+        post.PopDomainEvents();
+
+        post.Unlike(handle);
+
+        post.LikedBy.Should().NotContain(handle);
+        post.LikeCount.Should().Be(0);
+        post.PopDomainEvents().Should().ContainSingle()
+            .Which.Should().BeOfType<PostUnliked>()
+            .Which.UnlikedByHandle.Should().Be(handle);
+    }
+
+    [Fact]
+    public void Unlike_WithoutPriorLike_ThrowsDomainValidationException()
+    {
+        var post = Post.Create(AnyAuthor(), new PostContent("Hi"));
+        var handle = AnyHandle("bob");
+
+        var act = () => post.Unlike(handle);
+
+        act.Should().Throw<DomainValidationException>();
+    }
+
+    [Fact]
+    public void LikeCount_ReflectsSetSize()
+    {
+        var post = Post.Create(AnyAuthor(), new PostContent("Hi"));
+
+        post.Like(AnyHandle("alice"));
+        post.Like(AnyHandle("bob"));
+        post.Like(AnyHandle("charlie"));
+
+        post.LikeCount.Should().Be(3);
+
+        post.Unlike(AnyHandle("bob"));
+
+        post.LikeCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Like_DeletedPost_ThrowsDomainValidationException()
+    {
+        var post = Post.Create(AnyAuthor(), new PostContent("Hi"));
+        post.Delete();
+
+        var act = () => post.Like(AnyHandle("alice"));
+
+        act.Should().Throw<DomainValidationException>();
     }
 }
