@@ -15,10 +15,11 @@ public sealed partial class Post : AggregateRoot<PostId>
     private static partial Regex HashtagPattern();
 
     public UserId AuthorId { get; private set; } = null!;
-    public PostContent Content { get; private set; } = null!;
+    public PostContent? Content { get; private set; }
     public DateTime PostedAt { get; private set; }
     public bool IsDeleted { get; private set; }
     public PostId? ParentPostId { get; private set; }
+    public PostId? OriginalPostId { get; private set; }
 
     public HashSet<Handle> LikedBy { get; private set; } = new();
     public HashSet<Handle> Mentions { get; private set; } = new();
@@ -60,18 +61,48 @@ public sealed partial class Post : AggregateRoot<PostId>
         return post;
     }
 
+    public static Post CreateRepost(
+        Post originalPost,
+        Handle originalAuthorHandle,
+        UserId reposterUserId,
+        Handle reposterHandle,
+        string? commentary)
+    {
+        if (originalPost.IsDeleted)
+            throw new DomainException("Cannot repost a deleted post.");
+        if (reposterHandle == originalAuthorHandle)
+            throw new DomainException("Cannot repost your own post.");
+        if (commentary is not null && commentary.Length > 280)
+            throw new DomainValidationException("Repost commentary must be 280 characters or fewer.");
+
+        PostContent? content = commentary is not null ? new PostContent(commentary) : null;
+
+        var post = new Post
+        {
+            Id = PostId.New(),
+            AuthorId = reposterUserId,
+            Content = content,
+            PostedAt = DateTime.UtcNow,
+            IsDeleted = false,
+            OriginalPostId = originalPost.Id
+        };
+
+        post.RaiseDomainEvent(new PostReposted(originalPost.Id, reposterHandle));
+        return post;
+    }
+
     private void ExtractMentionsAndHashtags(Handle? authorId)
     {
         Mentions = new HashSet<Handle>(
             MentionPattern()
-                .Matches(Content.Value)
+                .Matches(Content!.Value)
                 .Select(m => m.Groups[1].Value.ToLowerInvariant())
                 .Where(v => authorId is null || v != authorId.Value)
                 .Select(v => new Handle(v)));
 
         Hashtags = new HashSet<string>(
             HashtagPattern()
-                .Matches(Content.Value)
+                .Matches(Content!.Value)
                 .Select(m => m.Groups[1].Value.ToLowerInvariant()));
     }
 
