@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
 using SocialDDD.Infrastructure.Persistence.Mapping;
+using SocialDDD.Infrastructure.Persistence.VerificationCodes;
 
 namespace SocialDDD.Infrastructure.Persistence;
 
@@ -22,6 +23,8 @@ public sealed class MongoDbContext
 
     public IMongoCollection<User> Users => _database.GetCollection<User>("users");
     public IMongoCollection<Post> Posts => _database.GetCollection<Post>("posts");
+    internal IMongoCollection<VerificationCodeDocument> VerificationCodes =>
+        _database.GetCollection<VerificationCodeDocument>("verification_codes");
 
     private void EnsureIndexes()
     {
@@ -30,5 +33,11 @@ public sealed class MongoDbContext
             new CreateIndexOptions { Unique = true, Background = true, Name = "handle_unique" });
 
         Users.Indexes.CreateOne(handleIndex);
+
+        var ttlIndex = new CreateIndexModel<VerificationCodeDocument>(
+            Builders<VerificationCodeDocument>.IndexKeys.Ascending(d => d.ExpiresAt),
+            new CreateIndexOptions { ExpireAfter = TimeSpan.Zero, Name = "expiresAt_ttl" });
+
+        VerificationCodes.Indexes.CreateOne(ttlIndex);
     }
 }
