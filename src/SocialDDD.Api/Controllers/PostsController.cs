@@ -42,7 +42,7 @@ public sealed class PostsController(
 
         try
         {
-            var command = new CreateReplyCommand(postId, requesterId.Value, request.Content);
+            var command = new CreateReplyCommand(postId, requesterId.Value, request.Content, request.MediaAssetIds);
             var reply = await createReplyHandler.HandleAsync(command, ct);
             return CreatedAtAction(nameof(GetPost), new { postId = reply.PostId }, reply);
         }
