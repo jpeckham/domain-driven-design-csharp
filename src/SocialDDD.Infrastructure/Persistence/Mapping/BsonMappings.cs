@@ -113,12 +113,12 @@ internal sealed class PasswordHashSerializer : SerializerBase<PasswordHash>
 
 internal sealed class PostContentSerializer : SerializerBase<PostContent>
 {
-    public override PostContent? Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
+    public override PostContent Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
     {
         if (ctx.Reader.CurrentBsonType == BsonType.Null)
         {
             ctx.Reader.ReadNull();
-            return null;
+            return null!;
         }
         return new(ctx.Reader.ReadString());
     }
