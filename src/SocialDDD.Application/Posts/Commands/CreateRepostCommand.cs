@@ -16,24 +16,25 @@ public sealed class CreateRepostCommandHandler(
     public async Task<PostDto> HandleAsync(CreateRepostCommand command, CancellationToken ct = default)
     {
         var originalPostId = PostId.From(command.OriginalPostId);
+        var requesterId = UserId.From(command.RequesterId);
 
         var originalPost = await postRepository.GetByIdAsync(originalPostId, ct)
             ?? throw new DomainException($"Post {command.OriginalPostId} not found.");
 
-        var reposter = await userRepository.GetByIdAsync(UserId.From(command.RequesterId), ct)
+        var reposter = await userRepository.GetByIdAsync(requesterId, ct)
             ?? throw new DomainException($"User {command.RequesterId} not found.");
 
         var originalAuthor = await userRepository.GetByIdAsync(originalPost.AuthorId, ct)
             ?? throw new DomainException("Original post author not found.");
 
-        var existing = await postRepository.FindRepostAsync(originalPostId, UserId.From(command.RequesterId), ct);
+        var existing = await postRepository.FindRepostAsync(originalPostId, requesterId, ct);
         if (existing is not null)
             throw new DuplicateRepostException("You have already reposted this post.");
 
         var repost = Post.CreateRepost(
             originalPost,
             originalAuthor.Handle,
-            UserId.From(command.RequesterId),
+            requesterId,
             reposter.Handle,
             command.Commentary);
 

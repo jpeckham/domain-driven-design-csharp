@@ -70,6 +70,8 @@ public sealed partial class Post : AggregateRoot<PostId>
     {
         if (originalPost.IsDeleted)
             throw new DomainException("Cannot repost a deleted post.");
+        if (originalPost.OriginalPostId is not null)
+            throw new DomainException("Cannot repost a repost.");
         if (reposterHandle == originalAuthorHandle)
             throw new DomainException("Cannot repost your own post.");
         if (commentary is not null && commentary.Length > 280)

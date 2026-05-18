@@ -92,4 +92,23 @@ public class PostRepostTests
         repost.Content.Should().BeNull();
         repost.OriginalPostId.Should().Be(original.Id);
     }
+
+    [Fact]
+    public void CreateRepost_RepostOfRepost_ThrowsDomainException()
+    {
+        var originalAuthorHandle = AnyHandle("alice");
+        var firstReposterUserId = AnyAuthor();
+        var firstReposterHandle = AnyHandle("bob");
+        var original = AnyPost();
+
+        var repost = Post.CreateRepost(original, originalAuthorHandle, firstReposterUserId, firstReposterHandle, null);
+        repost.PopDomainEvents();
+
+        var secondReposterUserId = AnyAuthor();
+        var secondReposterHandle = AnyHandle("charlie");
+
+        var act = () => Post.CreateRepost(repost, firstReposterHandle, secondReposterUserId, secondReposterHandle, null);
+
+        act.Should().Throw<DomainException>().WithMessage("*Cannot repost a repost*");
+    }
 }
