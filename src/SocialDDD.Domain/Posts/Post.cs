@@ -26,10 +26,12 @@ public sealed partial class Post : AggregateRoot<PostId>
     public HashSet<string> Hashtags { get; private set; } = new();
 
     public int LikeCount => LikedBy.Count;
+    public List<PostMedia> Media { get; private set; } = [];
 
     private Post() { }
 
-    public static Post Create(UserId authorId, PostContent content)
+    public static Post Create(
+        UserId authorId, PostContent content, IReadOnlyList<PostMedia>? media = null)
     {
         var post = new Post
         {
@@ -41,11 +43,15 @@ public sealed partial class Post : AggregateRoot<PostId>
             ParentPostId = null
         };
         post.ExtractMentionsAndHashtags(authorId: null);
+        if (media is { Count: > 0 })
+            post.AttachMedia(media);
         post.RaiseDomainEvent(new PostCreated(post.Id, authorId));
         return post;
     }
 
-    public static Post CreateReply(PostId parentPostId, UserId authorId, Handle authorHandle, PostContent content)
+    public static Post CreateReply(
+        PostId parentPostId, UserId authorId, Handle authorHandle, PostContent content,
+        IReadOnlyList<PostMedia>? media = null)
     {
         var post = new Post
         {
@@ -57,6 +63,8 @@ public sealed partial class Post : AggregateRoot<PostId>
             ParentPostId = parentPostId
         };
         post.ExtractMentionsAndHashtags(authorId: authorHandle);
+        if (media is { Count: > 0 })
+            post.AttachMedia(media);
         post.RaiseDomainEvent(new PostCreated(post.Id, authorId));
         return post;
     }
@@ -134,5 +142,17 @@ public sealed partial class Post : AggregateRoot<PostId>
             throw new NotLikedException($"Post is not liked by {byHandle.Display}.");
 
         RaiseDomainEvent(new PostUnliked(Id, byHandle));
+    }
+
+    public void AttachMedia(IReadOnlyList<PostMedia> media)
+    {
+        if (media.Count > 4)
+            throw new DomainException("A post may contain at most 4 media items.");
+        if (media.Count > 1 && media.Any(m => m.Kind != media[0].Kind))
+            throw new DomainException("All media items must be the same kind.");
+        if (media[0].Kind == MediaKind.Video && media.Count > 1)
+            throw new DomainException("A post may contain at most 1 video.");
+
+        Media = media.Select((m, i) => m with { SortOrder = i }).ToList();
     }
 }
