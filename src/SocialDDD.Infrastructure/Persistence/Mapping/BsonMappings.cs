@@ -45,6 +45,7 @@ internal static class BsonMappings
             cm.SetIgnoreExtraElements(true);
             cm.MapMember(p => p.LikedBy).SetElementName("likedBy");
             cm.MapMember(p => p.ParentPostId).SetElementName("parentPostId");
+            cm.MapMember(p => p.OriginalPostId).SetElementName("originalPostId");
             cm.MapMember(p => p.Mentions).SetElementName("mentions");
             cm.MapMember(p => p.Hashtags).SetElementName("hashtags");
         });
@@ -112,11 +113,23 @@ internal sealed class PasswordHashSerializer : SerializerBase<PasswordHash>
 
 internal sealed class PostContentSerializer : SerializerBase<PostContent>
 {
-    public override PostContent Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
-        => new(ctx.Reader.ReadString());
+    public override PostContent? Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
+    {
+        if (ctx.Reader.CurrentBsonType == BsonType.Null)
+        {
+            ctx.Reader.ReadNull();
+            return null;
+        }
+        return new(ctx.Reader.ReadString());
+    }
 
     public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, PostContent value)
-        => ctx.Writer.WriteString(value.Value);
+    {
+        if (value is null)
+            ctx.Writer.WriteNull();
+        else
+            ctx.Writer.WriteString(value.Value);
+    }
 }
 
 internal sealed class HandleSerializer : SerializerBase<Handle>

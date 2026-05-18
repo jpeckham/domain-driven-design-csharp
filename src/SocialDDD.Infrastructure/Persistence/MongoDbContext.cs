@@ -80,5 +80,13 @@ public sealed class MongoDbContext
             new CreateIndexOptions { Background = true, Name = "parentPostId_asc" });
 
         Posts.Indexes.CreateOne(postParentIdIndex);
+
+        var postRepostIndex = new CreateIndexModel<Post>(
+            Builders<Post>.IndexKeys
+                .Ascending("originalPostId")
+                .Ascending(p => p.AuthorId),
+            new CreateIndexOptions { Background = true, Name = "originalPostId_authorId_asc" });
+
+        Posts.Indexes.CreateOne(postRepostIndex);
     }
 }

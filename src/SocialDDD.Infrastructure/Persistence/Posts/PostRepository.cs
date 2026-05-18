@@ -118,4 +118,23 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
 
         return (int)await context.Posts.CountDocumentsAsync(filter, cancellationToken: ct);
     }
+
+    public async Task<Post?> FindRepostAsync(PostId originalPostId, UserId reposterUserId, CancellationToken ct = default)
+    {
+        var filter = Builders<Post>.Filter.And(
+            Builders<Post>.Filter.Eq("originalPostId", originalPostId.Value.ToString()),
+            Builders<Post>.Filter.Eq(p => p.AuthorId, reposterUserId),
+            Builders<Post>.Filter.Eq(p => p.IsDeleted, false));
+
+        return await context.Posts.Find(filter).FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<int> GetRepostCountAsync(PostId originalPostId, CancellationToken ct = default)
+    {
+        var filter = Builders<Post>.Filter.And(
+            Builders<Post>.Filter.Eq("originalPostId", originalPostId.Value.ToString()),
+            Builders<Post>.Filter.Eq(p => p.IsDeleted, false));
+
+        return (int)await context.Posts.CountDocumentsAsync(filter, cancellationToken: ct);
+    }
 }
