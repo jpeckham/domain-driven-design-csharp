@@ -395,6 +395,9 @@ file sealed class FakeEmailService : IEmailService
         OtpSentCount++;
         return Task.CompletedTask;
     }
+
+    public Task SendPasswordResetEmailAsync(string toEmail, string token, CancellationToken ct = default)
+        => Task.CompletedTask;
 }
 
 file sealed class FakeTokenService : ITokenService

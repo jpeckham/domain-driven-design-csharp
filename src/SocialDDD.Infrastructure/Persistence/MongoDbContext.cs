@@ -4,6 +4,7 @@ using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
 using SocialDDD.Infrastructure.Persistence.Mapping;
 using SocialDDD.Infrastructure.Persistence.OtpCodes;
+using SocialDDD.Infrastructure.Persistence.PasswordResetTokens;
 using SocialDDD.Infrastructure.Persistence.RememberedDevices;
 using SocialDDD.Infrastructure.Persistence.VerificationCodes;
 
@@ -31,6 +32,8 @@ public sealed class MongoDbContext
         _database.GetCollection<RememberedDeviceDocument>("remembered_devices");
     internal IMongoCollection<OtpDocument> DeviceOtps =>
         _database.GetCollection<OtpDocument>("device_otps");
+    internal IMongoCollection<PasswordResetTokenDocument> PasswordResetTokens =>
+        _database.GetCollection<PasswordResetTokenDocument>("password_reset_tokens");
 
     private void EnsureIndexes()
     {
@@ -59,5 +62,11 @@ public sealed class MongoDbContext
             new CreateIndexOptions { ExpireAfter = TimeSpan.Zero, Name = "otp_expiresAt_ttl" });
 
         DeviceOtps.Indexes.CreateOne(otpTtlIndex);
+
+        var passwordResetTtlIndex = new CreateIndexModel<PasswordResetTokenDocument>(
+            Builders<PasswordResetTokenDocument>.IndexKeys.Ascending(d => d.ExpiresAt),
+            new CreateIndexOptions { ExpireAfter = TimeSpan.Zero, Name = "passwordReset_expiresAt_ttl" });
+
+        PasswordResetTokens.Indexes.CreateOne(passwordResetTtlIndex);
     }
 }

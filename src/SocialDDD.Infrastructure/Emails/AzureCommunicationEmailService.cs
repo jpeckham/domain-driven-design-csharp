@@ -13,4 +13,9 @@ internal sealed class AzureCommunicationEmailService : IEmailService
     {
         throw new NotImplementedException("AzureCommunicationEmailService is not yet implemented.");
     }
+
+    public Task SendPasswordResetEmailAsync(string toEmail, string token, CancellationToken ct = default)
+    {
+        throw new NotImplementedException("AzureCommunicationEmailService is not yet implemented.");
+    }
 }

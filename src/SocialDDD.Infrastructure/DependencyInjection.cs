@@ -9,6 +9,7 @@ using SocialDDD.Infrastructure.Emails;
 using SocialDDD.Infrastructure.Events;
 using SocialDDD.Infrastructure.Persistence;
 using SocialDDD.Infrastructure.Persistence.OtpCodes;
+using SocialDDD.Infrastructure.Persistence.PasswordResetTokens;
 using SocialDDD.Infrastructure.Persistence.Posts;
 using SocialDDD.Infrastructure.Persistence.RememberedDevices;
 using SocialDDD.Infrastructure.Persistence.Users;
@@ -62,10 +63,19 @@ public static class DependencyInjection
         else
             services.AddScoped<IEmailService, ConsoleEmailService>();
 
+        // Password reset token repository: "MongoDb" or "InMemory" (default)
+        var passwordResetRepo = configuration["Features:PasswordResetTokenRepository"] ?? "InMemory";
+        if (passwordResetRepo.Equals("MongoDb", StringComparison.OrdinalIgnoreCase))
+            services.AddScoped<IPasswordResetTokenRepository, MongoDbPasswordResetTokenRepository>();
+        else
+            services.AddSingleton<IPasswordResetTokenRepository, InMemoryPasswordResetTokenRepository>();
+
         services.AddScoped<RegisterPendingUserCommand>();
         services.AddScoped<VerifyRegistrationCommand>();
         services.AddScoped<LoginWithDeviceCommand>();
         services.AddScoped<VerifyDeviceOtpCommand>();
+        services.AddScoped<RequestPasswordResetCommand>();
+        services.AddScoped<ResetPasswordCommand>();
 
         return services;
     }

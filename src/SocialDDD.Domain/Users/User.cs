@@ -69,4 +69,10 @@ public sealed class User : AggregateRoot<UserId>
     }
 
     public void UpdateDisplayName(DisplayName newName) => DisplayName = newName;
+
+    public void ResetPassword(PasswordHash newHash)
+    {
+        PasswordHash = newHash;
+        RaiseDomainEvent(new Events.PasswordReset(Id));
+    }
 }
