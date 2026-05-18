@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using SocialDDD.Domain.Posts;
@@ -64,10 +65,22 @@ internal sealed class UserIdSerializer : SerializerBase<UserId>
 internal sealed class PostIdSerializer : SerializerBase<PostId>
 {
     public override PostId Deserialize(BsonDeserializationContext ctx, BsonDeserializationArgs args)
-        => PostId.From(Guid.Parse(ctx.Reader.ReadString()));
+    {
+        if (ctx.Reader.CurrentBsonType == BsonType.Null)
+        {
+            ctx.Reader.ReadNull();
+            return null!;
+        }
+        return PostId.From(Guid.Parse(ctx.Reader.ReadString()));
+    }
 
     public override void Serialize(BsonSerializationContext ctx, BsonSerializationArgs args, PostId value)
-        => ctx.Writer.WriteString(value.Value.ToString());
+    {
+        if (value is null)
+            ctx.Writer.WriteNull();
+        else
+            ctx.Writer.WriteString(value.Value.ToString());
+    }
 }
 
 internal sealed class UsernameSerializer : SerializerBase<Username>
