@@ -1,11 +1,12 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using SocialDDD.Domain.Users;
 
 namespace SocialDDD.Infrastructure.Persistence.PasswordResetTokens;
 
 internal sealed class InMemoryPasswordResetTokenRepository : IPasswordResetTokenRepository
 {
-    // Keyed by userId string
     private readonly ConcurrentDictionary<string, (string userId, PasswordResetToken token)> _store = new();
 
     public Task SaveAsync(UserId userId, PasswordResetToken token, CancellationToken ct = default)
@@ -19,7 +20,9 @@ internal sealed class InMemoryPasswordResetTokenRepository : IPasswordResetToken
     {
         foreach (var (_, entry) in _store)
         {
-            if (entry.token.Token == token)
+            var storedBytes = Encoding.UTF8.GetBytes(entry.token.Token);
+            var providedBytes = Encoding.UTF8.GetBytes(token);
+            if (CryptographicOperations.FixedTimeEquals(storedBytes, providedBytes))
             {
                 var userId = UserId.From(Guid.Parse(entry.userId));
                 return Task.FromResult<(UserId, PasswordResetToken)?>((userId, entry.token));

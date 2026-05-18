@@ -12,7 +12,6 @@ public sealed class PasswordResetController(
     [HttpPost("api/password-reset-requests")]
     public async Task<IActionResult> RequestReset([FromBody] PasswordResetRequestDto request, CancellationToken ct)
     {
-        // Always returns 202 — no information leak
         await requestResetCommand.ExecuteAsync(request.Email, ct);
         return Accepted(new { message = "If that email address is registered, a password reset link has been sent." });
     }
