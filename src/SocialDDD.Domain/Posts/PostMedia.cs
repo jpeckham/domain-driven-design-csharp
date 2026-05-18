@@ -1,7 +1,5 @@
 namespace SocialDDD.Domain.Posts;
 
-public enum MediaKind { Image, Video }
-
 public sealed record PostMedia(
     Guid AssetId,
     MediaKind Kind,
