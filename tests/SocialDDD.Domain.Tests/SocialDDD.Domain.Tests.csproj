@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SocialDDD.Domain\SocialDDD.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SocialDDD.Application\SocialDDD.Application.csproj" />
   </ItemGroup>
 
 </Project>
