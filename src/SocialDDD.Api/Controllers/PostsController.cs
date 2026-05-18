@@ -16,6 +16,8 @@ public sealed class PostsController(
     LikePostCommandHandler likeHandler,
     UnlikePostCommandHandler unlikeHandler,
     CreateReplyCommandHandler createReplyHandler,
+    CreateRepostCommandHandler createRepostHandler,
+    DeleteRepostCommandHandler deleteRepostHandler,
     GetPostWithConversationQueryHandler conversationHandler) : ControllerBase
 {
     [Authorize]
@@ -53,6 +55,49 @@ public sealed class PostsController(
         }
     }
 
+    [Authorize]
+    [HttpPost("{postId:guid}/reposts")]
+    public async Task<IActionResult> CreateRepost(Guid postId, [FromBody] CreateRepostRequest request, CancellationToken ct)
+    {
+        var requesterId = GetRequesterId();
+        if (requesterId is null) return Unauthorized();
+
+        try
+        {
+            var command = new CreateRepostCommand(postId, requesterId.Value, request.Commentary);
+            var repost = await createRepostHandler.HandleAsync(command, ct);
+            return CreatedAtAction(nameof(GetPost), new { postId = repost.PostId }, repost);
+        }
+        catch (DuplicateRepostException ex) { return Conflict(new { error = ex.Message }); }
+        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainException ex)
+        {
+            return ex.Message.Contains("not found")
+                ? NotFound(new { error = ex.Message })
+                : BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpDelete("{postId:guid}/reposts/mine")]
+    public async Task<IActionResult> DeleteRepost(Guid postId, CancellationToken ct)
+    {
+        var requesterId = GetRequesterId();
+        if (requesterId is null) return Unauthorized();
+
+        try
+        {
+            await deleteRepostHandler.HandleAsync(new DeleteRepostCommand(postId, requesterId.Value), ct);
+            return Ok();
+        }
+        catch (DomainException ex)
+        {
+            return ex.Message.Contains("not found")
+                ? NotFound(new { error = ex.Message })
+                : Conflict(new { error = ex.Message });
+        }
+    }
+
     [HttpGet("{postId:guid}")]
     public async Task<IActionResult> GetPost(Guid postId, [FromQuery] int depthLimit = 3, [FromQuery] int repliesPerLevel = 100, CancellationToken ct = default)
     {
@@ -64,7 +109,7 @@ public sealed class PostsController(
         try
         {
             var query = new GetPostWithConversationQuery(postId, depthLimit, repliesPerLevel);
-            var result = await conversationHandler.HandleAsync(query, requesterHandle, ct);
+            var result = await conversationHandler.HandleAsync(query, requesterHandle, requesterId, ct);
             return Ok(result);
         }
         catch (DomainException ex)
@@ -103,11 +148,7 @@ public sealed class PostsController(
         CancellationToken ct = default)
     {
         var requesterId = GetRequesterId();
-        var requesterHandle = requesterId.HasValue
-            ? await postService.GetHandleByUserIdAsync(requesterId.Value, ct)
-            : null;
-
-        var posts = await postService.GetFeedAsync(skip, limit, requesterHandle, rootOnly, ct);
+        var posts = await postService.GetFeedAsync(skip, limit, requesterId, rootOnly, ct);
         return Ok(posts);
     }
 
@@ -115,11 +156,7 @@ public sealed class PostsController(
     public async Task<IActionResult> GetByUser(Guid userId, CancellationToken ct)
     {
         var requesterId = GetRequesterId();
-        var requesterHandle = requesterId.HasValue
-            ? await postService.GetHandleByUserIdAsync(requesterId.Value, ct)
-            : null;
-
-        var posts = await postService.GetByAuthorAsync(userId, requesterHandle, ct);
+        var posts = await postService.GetByAuthorAsync(userId, requesterId, ct);
         return Ok(posts);
     }
 

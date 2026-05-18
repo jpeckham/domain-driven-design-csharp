@@ -17,6 +17,8 @@ builder.Services.AddScoped<PostService>();
 builder.Services.AddScoped<LikePostCommandHandler>();
 builder.Services.AddScoped<UnlikePostCommandHandler>();
 builder.Services.AddScoped<CreateReplyCommandHandler>();
+builder.Services.AddScoped<CreateRepostCommandHandler>();
+builder.Services.AddScoped<DeleteRepostCommandHandler>();
 builder.Services.AddScoped<GetPostWithConversationQueryHandler>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
