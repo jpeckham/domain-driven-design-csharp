@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SocialDDD.Application.Interfaces;
+using SocialDDD.Application.Posts;
 using SocialDDD.Application.Users.Commands;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
@@ -14,6 +15,7 @@ using SocialDDD.Infrastructure.Persistence.Posts;
 using SocialDDD.Infrastructure.Persistence.RememberedDevices;
 using SocialDDD.Infrastructure.Persistence.Users;
 using SocialDDD.Infrastructure.Persistence.VerificationCodes;
+using SocialDDD.Infrastructure.PostMedia;
 using SocialDDD.Infrastructure.ProfileImages;
 
 namespace SocialDDD.Infrastructure;
@@ -76,6 +78,15 @@ public static class DependencyInjection
         Directory.CreateDirectory(profileImageDir);
         services.AddSingleton<IProfileImageStorageService>(_ =>
             new LocalFileProfileImageStorageService(profileImageDir));
+
+        // Post media storage: local file system
+        var postMediaDir = configuration["PostMedia:Directory"] ?? "./data/post-media";
+        Directory.CreateDirectory(postMediaDir);
+        services.AddSingleton<IPostMediaStorageService>(_ =>
+            new LocalFilePostMediaStorageService(postMediaDir));
+
+        // Pending media store: singleton in-memory (1-hour TTL)
+        services.AddSingleton<IPendingMediaStore, InMemoryPendingMediaStore>();
 
         services.AddScoped<RegisterPendingUserCommand>();
         services.AddScoped<VerifyRegistrationCommand>();

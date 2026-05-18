@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
+using PostMediaType = SocialDDD.Domain.Posts.PostMedia;
 
 namespace SocialDDD.Infrastructure.Persistence.Mapping;
 
@@ -49,6 +50,28 @@ internal static class BsonMappings
                 nameof(ProfileImage.UploadedAt));
         });
 
+        BsonClassMap.RegisterClassMap<PostMediaType>(cm =>
+        {
+            cm.AutoMap();
+            cm.SetIgnoreExtraElements(true);
+            cm.MapConstructor(
+                typeof(PostMediaType).GetConstructor([
+                    typeof(Guid), typeof(MediaKind), typeof(string), typeof(string), typeof(long),
+                    typeof(int?), typeof(int?), typeof(long?), typeof(string), typeof(string), typeof(int)
+                ])!,
+                nameof(PostMediaType.AssetId),
+                nameof(PostMediaType.Kind),
+                nameof(PostMediaType.StorageKey),
+                nameof(PostMediaType.ContentType),
+                nameof(PostMediaType.ByteLength),
+                nameof(PostMediaType.Width),
+                nameof(PostMediaType.Height),
+                nameof(PostMediaType.DurationMs),
+                nameof(PostMediaType.ThumbnailKey),
+                nameof(PostMediaType.AltText),
+                nameof(PostMediaType.SortOrder));
+        });
+
         BsonClassMap.RegisterClassMap<User>(cm =>
         {
             cm.AutoMap();
@@ -67,6 +90,7 @@ internal static class BsonMappings
             cm.MapMember(p => p.OriginalPostId).SetElementName("originalPostId");
             cm.MapMember(p => p.Mentions).SetElementName("mentions");
             cm.MapMember(p => p.Hashtags).SetElementName("hashtags");
+            cm.MapMember(p => p.Media).SetElementName("media");
         });
     }
 }
