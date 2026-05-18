@@ -87,6 +87,7 @@ public sealed class PostsController(
             var likeCount = await likeHandler.HandleAsync(new LikePostCommand(postId, requesterId.Value), ct);
             return Ok(new { likeCount });
         }
+        catch (AlreadyLikedException ex) { return Conflict(new { error = ex.Message }); }
         catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
         catch (DomainException ex)
         {
@@ -108,6 +109,7 @@ public sealed class PostsController(
             var likeCount = await unlikeHandler.HandleAsync(new UnlikePostCommand(postId, requesterId.Value), ct);
             return Ok(new { likeCount });
         }
+        catch (NotLikedException ex) { return NotFound(new { error = ex.Message }); }
         catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
         catch (DomainException ex)
         {

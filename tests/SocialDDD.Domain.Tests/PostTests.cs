@@ -86,7 +86,7 @@ public class PostTests
     }
 
     [Fact]
-    public void Like_SameUserLikesTwice_ThrowsDomainValidationException()
+    public void Like_SameUserLikesTwice_ThrowsAlreadyLikedException()
     {
         var post = Post.Create(AnyAuthor(), new PostContent("Hi"));
         var handle = AnyHandle("bob");
@@ -94,7 +94,7 @@ public class PostTests
 
         var act = () => post.Like(handle);
 
-        act.Should().Throw<DomainValidationException>();
+        act.Should().Throw<AlreadyLikedException>();
     }
 
     [Fact]
@@ -115,14 +115,14 @@ public class PostTests
     }
 
     [Fact]
-    public void Unlike_WithoutPriorLike_ThrowsDomainValidationException()
+    public void Unlike_WithoutPriorLike_ThrowsNotLikedException()
     {
         var post = Post.Create(AnyAuthor(), new PostContent("Hi"));
         var handle = AnyHandle("bob");
 
         var act = () => post.Unlike(handle);
 
-        act.Should().Throw<DomainValidationException>();
+        act.Should().Throw<NotLikedException>();
     }
 
     [Fact]

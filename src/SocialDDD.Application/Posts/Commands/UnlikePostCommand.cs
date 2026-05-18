@@ -24,9 +24,6 @@ public sealed class UnlikePostCommandHandler(
         var post = await postRepository.GetByIdAsync(postId, ct)
             ?? throw new DomainException($"Post {command.PostId} not found.");
 
-        if (!await postRepository.IsLikedByAsync(postId, handle, ct))
-            throw new DomainValidationException($"Post is not liked by {handle.Display}.");
-
         post.Unlike(handle);
 
         await postRepository.RemoveLikeAsync(postId, handle, ct);
