@@ -146,4 +146,28 @@ public class ValueObjectTests
         var act = () => new DisplayName("A");
         act.Should().NotThrow();
     }
+
+    [Fact]
+    public void VerificationCode_NotExpired_IsExpiredReturnsFalse()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var code = new VerificationCode("123456", now.AddMinutes(15));
+        code.IsExpired(now).Should().BeFalse();
+    }
+
+    [Fact]
+    public void VerificationCode_Expired_IsExpiredReturnsTrue()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var code = new VerificationCode("123456", now.AddMinutes(-1));
+        code.IsExpired(now).Should().BeTrue();
+    }
+
+    [Fact]
+    public void VerificationCode_ExpiresExactlyNow_IsExpiredReturnsTrue()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var code = new VerificationCode("123456", now);
+        code.IsExpired(now).Should().BeTrue();
+    }
 }

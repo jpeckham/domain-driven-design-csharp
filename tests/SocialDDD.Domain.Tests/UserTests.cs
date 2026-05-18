@@ -106,4 +106,66 @@ public class UserTests
 
         user.DisplayName.Should().Be(newName);
     }
+
+    [Fact]
+    public void Register_CreatesUserWithPendingStatus()
+    {
+        var user = User.Register(
+            new Username("alice"),
+            new Email("alice@example.com"),
+            new PasswordHash("hash123"),
+            new Handle("alice"),
+            new DisplayName("Alice Smith"));
+
+        user.Status.Should().Be(UserStatus.Pending);
+    }
+
+    [Fact]
+    public void RegisterImmediate_CreatesUserWithActiveStatus()
+    {
+        var user = User.RegisterImmediate(
+            new Username("alice"),
+            new Email("alice@example.com"),
+            new PasswordHash("hash123"),
+            new Handle("alice"),
+            new DisplayName("Alice Smith"));
+
+        user.Status.Should().Be(UserStatus.Active);
+    }
+
+    [Fact]
+    public void Activate_SetsStatusToActive_AndRaisesUserActivatedEvent()
+    {
+        var user = User.Register(
+            new Username("alice"),
+            new Email("alice@example.com"),
+            new PasswordHash("hash123"),
+            new Handle("alice"),
+            new DisplayName("Alice Smith"));
+
+        user.PopDomainEvents();
+
+        user.Activate();
+
+        user.Status.Should().Be(UserStatus.Active);
+
+        var events = user.PopDomainEvents();
+        events.Should().ContainSingle()
+            .Which.Should().BeOfType<UserActivated>()
+            .Which.UserId.Should().Be(user.Id);
+    }
+
+    [Fact]
+    public void Activate_WhenAlreadyActive_ThrowsDomainException()
+    {
+        var user = User.RegisterImmediate(
+            new Username("alice"),
+            new Email("alice@example.com"),
+            new PasswordHash("hash123"),
+            new Handle("alice"),
+            new DisplayName("Alice Smith"));
+
+        var act = () => user.Activate();
+        act.Should().Throw<DomainException>();
+    }
 }
