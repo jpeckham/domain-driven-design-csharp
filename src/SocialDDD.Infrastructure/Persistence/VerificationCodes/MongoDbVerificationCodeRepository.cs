@@ -1,3 +1,5 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using SocialDDD.Domain.Users;
 
@@ -35,6 +37,8 @@ internal sealed class MongoDbVerificationCodeRepository(MongoDbContext context) 
 
 internal sealed class VerificationCodeDocument(string userId, string code, DateTime expiresAt)
 {
+    [BsonId]
+    public ObjectId Id { get; init; } = ObjectId.GenerateNewId();
     public string UserId { get; init; } = userId;
     public string Code { get; init; } = code;
     public DateTime ExpiresAt { get; init; } = expiresAt;

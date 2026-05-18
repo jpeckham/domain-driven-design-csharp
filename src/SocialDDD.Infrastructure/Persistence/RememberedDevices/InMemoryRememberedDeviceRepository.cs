@@ -5,7 +5,7 @@ namespace SocialDDD.Infrastructure.Persistence.RememberedDevices;
 
 internal sealed class InMemoryRememberedDeviceRepository : IRememberedDeviceRepository
 {
-    private static readonly ConcurrentDictionary<string, byte> _store = new();
+    private readonly ConcurrentDictionary<string, byte> _store = new();
 
     private static string Key(UserId userId, DeviceId deviceId) =>
         $"{userId.Value}:{deviceId.Value}";

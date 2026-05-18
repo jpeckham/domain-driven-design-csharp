@@ -1,3 +1,5 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using SocialDDD.Domain.Users;
 
@@ -26,6 +28,8 @@ internal sealed class MongoDbRememberedDeviceRepository(MongoDbContext context) 
 
 internal sealed class RememberedDeviceDocument(string userId, string deviceId)
 {
+    [BsonId]
+    public ObjectId Id { get; init; } = ObjectId.GenerateNewId();
     public string UserId { get; init; } = userId;
     public string DeviceId { get; init; } = deviceId;
 }

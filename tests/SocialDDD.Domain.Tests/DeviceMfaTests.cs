@@ -371,7 +371,7 @@ file sealed class FakeOtpRepo : IOtpRepository
 
     public Task<OneTimePasscode?> FindAsync(UserId userId, DeviceId deviceId, CancellationToken ct = default)
     {
-        if (_userId == userId && _deviceId?.Value == deviceId.Value)
+        if (_userId == userId && _deviceId == deviceId)
             return Task.FromResult(_otp);
         return Task.FromResult<OneTimePasscode?>(null);
     }

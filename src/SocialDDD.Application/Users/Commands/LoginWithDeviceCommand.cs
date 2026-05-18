@@ -34,11 +34,14 @@ public sealed class LoginWithDeviceCommand(
         var deviceId = new DeviceId(request.DeviceId);
 
         var user = await userRepository.GetByEmailAsync(email, ct);
-        if (user is null || !passwordHasher.Verify(request.Password, user.PasswordHash.Value))
+        if (user is null)
             throw new DomainValidationException("Invalid credentials.");
 
         if (user.Status == UserStatus.Pending)
             throw new DomainValidationException("Account is not yet verified. Please check your email.");
+
+        if (!passwordHasher.Verify(request.Password, user.PasswordHash.Value))
+            throw new DomainValidationException("Invalid credentials.");
 
         var isKnown = await rememberedDeviceRepository.IsRememberedAsync(user.Id, deviceId, ct);
         if (isKnown)

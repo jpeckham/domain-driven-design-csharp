@@ -35,21 +35,21 @@ public static class DependencyInjection
         if (verificationCodeRepo.Equals("MongoDb", StringComparison.OrdinalIgnoreCase))
             services.AddScoped<IVerificationCodeRepository, MongoDbVerificationCodeRepository>();
         else
-            services.AddScoped<IVerificationCodeRepository, InMemoryVerificationCodeRepository>();
+            services.AddSingleton<IVerificationCodeRepository, InMemoryVerificationCodeRepository>();
 
         // Remembered device repository: "MongoDb" or "InMemory" (default)
         var rememberedDeviceRepo = configuration["Features:RememberedDeviceRepository"] ?? "InMemory";
         if (rememberedDeviceRepo.Equals("MongoDb", StringComparison.OrdinalIgnoreCase))
             services.AddScoped<IRememberedDeviceRepository, MongoDbRememberedDeviceRepository>();
         else
-            services.AddScoped<IRememberedDeviceRepository, InMemoryRememberedDeviceRepository>();
+            services.AddSingleton<IRememberedDeviceRepository, InMemoryRememberedDeviceRepository>();
 
         // OTP repository: "MongoDb" or "InMemory" (default)
         var otpRepo = configuration["Features:OtpRepository"] ?? "InMemory";
         if (otpRepo.Equals("MongoDb", StringComparison.OrdinalIgnoreCase))
             services.AddScoped<IOtpRepository, MongoDbOtpRepository>();
         else
-            services.AddScoped<IOtpRepository, InMemoryOtpRepository>();
+            services.AddSingleton<IOtpRepository, InMemoryOtpRepository>();
 
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();

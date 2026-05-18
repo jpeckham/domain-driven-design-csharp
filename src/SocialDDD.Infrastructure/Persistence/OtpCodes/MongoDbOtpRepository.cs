@@ -1,3 +1,5 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using SocialDDD.Domain.Users;
 
@@ -38,6 +40,8 @@ internal sealed class MongoDbOtpRepository(MongoDbContext context) : IOtpReposit
 
 internal sealed class OtpDocument(string userId, string deviceId, string code, DateTime expiresAt)
 {
+    [BsonId]
+    public ObjectId Id { get; init; } = ObjectId.GenerateNewId();
     public string UserId { get; init; } = userId;
     public string DeviceId { get; init; } = deviceId;
     public string Code { get; init; } = code;

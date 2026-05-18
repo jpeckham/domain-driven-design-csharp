@@ -36,7 +36,7 @@ public sealed class SessionsController(
             var response = await verifyDeviceOtpCommand.ExecuteAsync(request, ct);
             return Ok(response);
         }
-        catch (DomainValidationException ex) { return BadRequest(new { error = ex.Message }); }
-        catch (DomainException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (DomainValidationException ex) { return Unauthorized(new { error = ex.Message }); }
+        catch (DomainException ex) { return Unauthorized(new { error = ex.Message }); }
     }
 }

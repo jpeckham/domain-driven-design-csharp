@@ -5,7 +5,7 @@ namespace SocialDDD.Infrastructure.Persistence.OtpCodes;
 
 internal sealed class InMemoryOtpRepository : IOtpRepository
 {
-    private static readonly ConcurrentDictionary<string, OneTimePasscode> _store = new();
+    private readonly ConcurrentDictionary<string, OneTimePasscode> _store = new();
 
     private static string Key(UserId userId, DeviceId deviceId) =>
         $"{userId.Value}:{deviceId.Value}";
