@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Routing
 @inject AuthService Auth
 @inject NavigationManager Nav
 
@@ -28,9 +30,21 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Nav.LocationChanged += OnLocationChanged;
+        await RefreshAuthStateAsync();
+    }
+
+    private async Task RefreshAuthStateAsync()
+    {
         var user = await Auth.GetCurrentUserAsync();
         _currentHandle = user?.Handle;
         _displayName = user?.DisplayName;
+        StateHasChanged();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        _ = InvokeAsync(RefreshAuthStateAsync);
     }
 
     private async Task LogoutAsync()
@@ -39,5 +53,10 @@
         _currentHandle = null;
         _displayName = null;
         Nav.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
     }
 }

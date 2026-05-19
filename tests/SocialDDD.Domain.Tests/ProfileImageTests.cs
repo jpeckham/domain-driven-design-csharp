@@ -245,6 +245,24 @@ public class ProfileImageCommandTests
         await act.Should().ThrowAsync<DomainException>();
     }
 
+    [Fact]
+    public async Task GetProfileImage_WhenStoredFileIsMissing_ThrowsDomainException()
+    {
+        var assetId = Guid.NewGuid();
+        var user = MakeUser();
+        user.SetProfileImage(new ProfileImage(assetId, "missing-key", "image/jpeg", 100, null, null, DateTimeOffset.UtcNow));
+        user.PopDomainEvents();
+
+        var handler = new GetProfileImageQueryHandler(
+            new FakeUserRepo(user),
+            new FakeStorageService { MissingOnLoad = true });
+
+        Func<Task> act = async () => await handler.HandleAsync(new GetProfileImageQuery(assetId));
+
+        await act.Should().ThrowAsync<DomainException>()
+            .WithMessage($"Profile image {assetId} file is missing.");
+    }
+
     // ── fakes ────────────────────────────────────────────────────────────────
 
     private sealed class FakeUserRepo(User? user) : IUserRepository
@@ -270,6 +288,7 @@ public class ProfileImageCommandTests
     {
         public List<string> DeletedKeys { get; } = [];
         public bool Exists { get; init; } = true;
+        public bool MissingOnLoad { get; init; }
 
         public Task<(string uploadUrl, string storageKey)> ReserveUploadAsync(Guid assetId, string contentType, CancellationToken ct)
             => Task.FromResult(($"/api/media/uploads/profile/{assetId}", assetId.ToString()));
@@ -280,7 +299,9 @@ public class ProfileImageCommandTests
         public Task<bool> ExistsAsync(string storageKey, CancellationToken ct) => Task.FromResult(Exists);
 
         public Task<Stream> LoadAsync(string storageKey, CancellationToken ct)
-            => Task.FromResult<Stream>(new MemoryStream([1, 2, 3]));
+            => MissingOnLoad
+                ? throw new FileNotFoundException("missing")
+                : Task.FromResult<Stream>(new MemoryStream([1, 2, 3]));
 
         public Task DeleteAsync(string storageKey, CancellationToken ct)
         {

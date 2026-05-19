@@ -19,7 +19,10 @@ services:
       ASPNETCORE_HTTP_PORTS: "8080"
       Mongo__ConnectionString: mongodb://mongo:27017
       Mongo__DatabaseName: socialddd
+      Features__OtpRepository: MongoDb
+      Features__RememberedDeviceRepository: MongoDb
       PostMedia__Directory: /app/data/post-media
+      ProfileImages__Directory: /app/data/post-media/profile-images
       Jwt__Secret: dev-secret-change-in-production-must-be-32-chars-min
       Jwt__Issuer: SocialDDD
       Jwt__Audience: SocialDDD

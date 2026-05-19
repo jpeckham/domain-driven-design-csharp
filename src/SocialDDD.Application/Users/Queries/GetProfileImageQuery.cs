@@ -16,7 +16,16 @@ public sealed class GetProfileImageQueryHandler(
             ?? throw new DomainException($"Profile image {query.AssetId} not found.");
 
         var image = user.ProfileImage!;
-        var stream = await storageService.LoadAsync(image.StorageKey, ct);
+        Stream stream;
+        try
+        {
+            stream = await storageService.LoadAsync(image.StorageKey, ct);
+        }
+        catch (FileNotFoundException)
+        {
+            throw new DomainException($"Profile image {query.AssetId} file is missing.");
+        }
+
         return (stream, image.ContentType);
     }
 }
