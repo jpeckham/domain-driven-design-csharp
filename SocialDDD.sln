@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocialDDD.Domain", "src\SocialDDD.Domain\SocialDDD.Domain.csproj", "{74BED4F0-8383-403C-8D7A-D5F2C4B52FE5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocialDDD.Application", "src\SocialDDD.Application\SocialDDD.Application.csproj", "{00126AF4-2E41-41EF-9D4A-08B0D2BD8DA4}"
@@ -29,6 +31,18 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Debug|x64.Build.0 = Debug|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Debug|x86.Build.0 = Debug|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Release|x64.ActiveCfg = Release|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Release|x64.Build.0 = Release|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Release|x86.ActiveCfg = Release|Any CPU
+		{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}.Release|x86.Build.0 = Release|Any CPU
 		{74BED4F0-8383-403C-8D7A-D5F2C4B52FE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{74BED4F0-8383-403C-8D7A-D5F2C4B52FE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{74BED4F0-8383-403C-8D7A-D5F2C4B52FE5}.Debug|x64.ActiveCfg = Debug|Any CPU

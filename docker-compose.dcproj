@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" Sdk="Microsoft.Docker.Sdk">
+  <PropertyGroup Label="Globals">
+    <ProjectVersion>2.1</ProjectVersion>
+    <DockerTargetOS>Linux</DockerTargetOS>
+    <ProjectGuid>{A295B5B0-33F7-4CE1-99EE-22B86F13B7C4}</ProjectGuid>
+    <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
+    <DockerServiceName>client</DockerServiceName>
+    <DockerServiceUrl>http://localhost:5200</DockerServiceUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include=".dockerignore" />
+    <None Include="docker-compose.yml" />
+    <None Include="Dockerfile.api" />
+    <None Include="Dockerfile.client" />
+  </ItemGroup>
+</Project>
