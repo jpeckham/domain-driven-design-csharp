@@ -107,6 +107,38 @@ public sealed class PostSearchMongoIntegrationTests : IAsyncLifetime
         results[0].AuthorId.Should().Be(visibleAuthor.Id);
     }
 
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task AddAsync_PostWithMedia_PersistsMediaAssetId()
+    {
+        var repository = _provider.GetRequiredService<IPostRepository>();
+        var author = await AddUserAsync("media_author");
+        var assetId = Guid.NewGuid();
+        var media = new PostMedia(
+            assetId,
+            MediaKind.Image,
+            assetId.ToString(),
+            "image/jpeg",
+            1024,
+            800,
+            600,
+            null,
+            null,
+            null,
+            0);
+        var post = Post.Create(author.Id, null, [media]);
+
+        await repository.AddAsync(post);
+
+        var stored = await repository.GetByIdAsync(post.Id);
+        stored.Should().NotBeNull();
+        stored!.Media.Should().ContainSingle(m => m.AssetId == assetId);
+
+        var foundByMedia = await repository.FindByMediaAssetIdAsync(assetId);
+        foundByMedia.Should().NotBeNull();
+        foundByMedia!.Id.Should().Be(post.Id);
+    }
+
     private async Task<User> AddUserAsync(string handle)
     {
         var user = User.RegisterImmediate(

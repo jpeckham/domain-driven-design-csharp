@@ -77,12 +77,15 @@
         _items.Add(item);
 
         if (file.Size > MaxFileSize)
-            item.Status = "Large file";
+        {
+            await FailUploadAsync(item, "File must be 20 MB or smaller.");
+            return;
+        }
 
         var session = await PostApi.BeginPostMediaUploadAsync(file.ContentType);
         if (session is null)
         {
-            item.Status = "Failed";
+            await FailUploadAsync(item, "Media upload could not start.");
             return;
         }
 
@@ -91,25 +94,36 @@
         await using var stream = file.OpenReadStream(MaxFileSize);
         if (!await PostApi.PutPostMediaBytesAsync(session.UploadUrl, stream, file.ContentType))
         {
-            item.Status = "Failed";
+            await FailUploadAsync(item, "Media upload failed.");
             return;
         }
 
         var completed = await PostApi.CompletePostMediaUploadAsync(session.AssetId, file.ContentType, file.Size);
         if (completed is null)
         {
-            item.Status = "Failed";
+            await FailUploadAsync(item, "Media upload could not be completed.");
             return;
         }
 
         item.Status = "Uploaded";
-        AssetIds = _items.Where(i => i.Status == "Uploaded").Select(i => i.AssetId).ToList();
-        await AssetIdsChanged.InvokeAsync(AssetIds);
+        await RefreshAssetIdsAsync();
     }
 
     private async Task RemoveAsync(Guid assetId)
     {
         _items.RemoveAll(i => i.AssetId == assetId);
+        await RefreshAssetIdsAsync();
+    }
+
+    private async Task FailUploadAsync(UploadItem item, string message)
+    {
+        _items.Remove(item);
+        _error = message;
+        await RefreshAssetIdsAsync();
+    }
+
+    private async Task RefreshAssetIdsAsync()
+    {
         AssetIds = _items.Where(i => i.Status == "Uploaded").Select(i => i.AssetId).ToList();
         await AssetIdsChanged.InvokeAsync(AssetIds);
     }

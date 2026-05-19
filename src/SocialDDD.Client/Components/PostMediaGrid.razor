@@ -7,12 +7,12 @@
         {
             if (item.Kind.Equals("Video", StringComparison.OrdinalIgnoreCase))
             {
-                <video controls src="@item.Url"></video>
+                <video controls src="@item.MediaUrl"></video>
             }
             else
             {
-                <a href="@item.Url" target="_blank" rel="noopener">
-                    <img src="@item.Url" alt="@item.AltText" />
+                <a href="@item.MediaUrl" target="_blank" rel="noopener">
+                    <img src="@item.MediaUrl" alt="@item.AltText" />
                 </a>
             }
         }

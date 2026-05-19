@@ -28,7 +28,10 @@ public sealed class PostService(
             throw new DomainException("Author not found.");
 
         var media = LoadAndValidateMedia(request.MediaAssetIds);
-        var post = Post.Create(authorId, new PostContent(request.Content), media);
+        var content = string.IsNullOrWhiteSpace(request.Content)
+            ? null
+            : new PostContent(request.Content);
+        var post = Post.Create(authorId, content, media);
 
         await postRepository.AddAsync(post, ct);
         await eventDispatcher.DispatchAsync(post.PopDomainEvents(), ct);

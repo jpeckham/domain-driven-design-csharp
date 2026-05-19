@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SocialDDD.Application.Posts.Commands;
+using SocialDDD.Application.Posts.Queries;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Posts;
 
@@ -11,6 +12,7 @@ namespace SocialDDD.Api.Controllers;
 public sealed class PostMediaController(
     BeginPostMediaUploadCommandHandler beginHandler,
     CompletePostMediaUploadCommandHandler completeHandler,
+    GetPostMediaQueryHandler serveHandler,
     IPostMediaStorageService storageService) : ControllerBase
 {
     [Authorize]
@@ -67,11 +69,10 @@ public sealed class PostMediaController(
     {
         try
         {
-            var contentType = await storageService.GetContentTypeAsync(assetId.ToString(), ct)
-                ?? "application/octet-stream";
-            var stream = await storageService.LoadAsync(assetId.ToString(), ct);
+            var (stream, contentType) = await serveHandler.HandleAsync(new GetPostMediaQuery(assetId), ct);
             return File(stream, contentType);
         }
+        catch (DomainException) { return NotFound(); }
         catch (FileNotFoundException) { return NotFound(); }
     }
 

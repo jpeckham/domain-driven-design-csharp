@@ -4,6 +4,8 @@ namespace SocialDDD.Infrastructure.ProfileImages;
 
 public sealed class LocalFileProfileImageStorageService(string baseDirectory) : IProfileImageStorageService
 {
+    private readonly string _baseDirectory = EnsureDirectory(baseDirectory);
+
     public Task<(string uploadUrl, string storageKey)> ReserveUploadAsync(
         Guid assetId, string contentType, CancellationToken ct)
     {
@@ -40,5 +42,11 @@ public sealed class LocalFileProfileImageStorageService(string baseDirectory) : 
         return Task.CompletedTask;
     }
 
-    private string FilePath(string storageKey) => Path.Combine(baseDirectory, storageKey);
+    private string FilePath(string storageKey) => Path.Combine(_baseDirectory, storageKey);
+
+    private static string EnsureDirectory(string directory)
+    {
+        Directory.CreateDirectory(directory);
+        return directory;
+    }
 }

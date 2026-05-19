@@ -10,6 +10,8 @@ public class PostTests
 {
     private static UserId AnyAuthor() => UserId.New();
     private static Handle AnyHandle(string value = "alice") => new(value);
+    private static PostMedia AnyImage() => new(
+        Guid.NewGuid(), MediaKind.Image, "key", "image/jpeg", 1024, 800, 600, null, null, null, 0);
 
     [Fact]
     public void Create_ValidArgs_CreatesPostAndRaisesEvent()
@@ -18,7 +20,7 @@ public class PostTests
         var post = Post.Create(authorId, new PostContent("Hello world"));
 
         post.AuthorId.Should().Be(authorId);
-        post.Content.Value.Should().Be("Hello world");
+        post.Content!.Value.Should().Be("Hello world");
         post.IsDeleted.Should().BeFalse();
 
         var events = post.PopDomainEvents();
@@ -65,6 +67,24 @@ public class PostTests
         var act = () => Post.Create(AnyAuthor(), new PostContent(""));
 
         act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Create_MediaOnly_CreatesPostWithNullContent()
+    {
+        var post = Post.Create(AnyAuthor(), null, [AnyImage()]);
+
+        post.Content.Should().BeNull();
+        post.Media.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Create_NoContentAndNoMedia_ThrowsDomainException()
+    {
+        var act = () => Post.Create(AnyAuthor(), null, []);
+
+        act.Should().Throw<DomainException>()
+            .WithMessage("Post must include text or media.");
     }
 
     // ---- Like tests ----

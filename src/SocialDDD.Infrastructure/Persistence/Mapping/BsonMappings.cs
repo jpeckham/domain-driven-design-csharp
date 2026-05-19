@@ -39,6 +39,8 @@ internal static class BsonMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
+            cm.GetMemberMap(nameof(ProfileImage.AssetId))
+                .SetSerializer(new GuidSerializer(GuidRepresentation.Standard));
             cm.MapConstructor(
                 typeof(ProfileImage).GetConstructor([
                     typeof(Guid), typeof(string), typeof(string), typeof(long),
@@ -57,6 +59,8 @@ internal static class BsonMappings
         {
             cm.AutoMap();
             cm.SetIgnoreExtraElements(true);
+            cm.GetMemberMap(nameof(PostMedia.AssetId))
+                .SetSerializer(new GuidSerializer(GuidRepresentation.Standard));
             cm.MapConstructor(
                 typeof(PostMedia).GetConstructor([
                     typeof(Guid), typeof(MediaKind), typeof(string), typeof(string), typeof(long),

@@ -31,8 +31,11 @@ public sealed partial class Post : AggregateRoot<PostId>
     private Post() { }
 
     public static Post Create(
-        UserId authorId, PostContent content, IReadOnlyList<PostMedia>? media = null)
+        UserId authorId, PostContent? content, IReadOnlyList<PostMedia>? media = null)
     {
+        if (content is null && media is null or { Count: 0 })
+            throw new DomainException("Post must include text or media.");
+
         var post = new Post
         {
             Id = PostId.New(),
@@ -42,7 +45,8 @@ public sealed partial class Post : AggregateRoot<PostId>
             IsDeleted = false,
             ParentPostId = null
         };
-        post.ExtractMentionsAndHashtags(authorId: null);
+        if (content is not null)
+            post.ExtractMentionsAndHashtags(authorId: null);
         if (media is { Count: > 0 })
             post.AttachMedia(media);
         post.RaiseDomainEvent(new PostCreated(post.Id, authorId));

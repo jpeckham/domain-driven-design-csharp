@@ -129,7 +129,7 @@ public sealed class PostApiService(HttpClient http)
         int? Width,
         int? Height,
         long? DurationMs,
-        string Url,
+        string MediaUrl,
         int SortOrder);
 
     public sealed record PostConversationDto(PostDto Post, List<PostConversationDto> Replies);

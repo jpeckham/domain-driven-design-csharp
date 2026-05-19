@@ -5,10 +5,9 @@
 <section class="auth">
     <div class="auth-panel">
         <h1>Verify Device</h1>
-        <p>Enter the one-time passcode sent to your email address.</p>
+        <p>Enter the one-time passcode.</p>
 
         <form @onsubmit="HandleVerify">
-            <input type="email" value="@Email" readonly />
             <input inputmode="numeric" maxlength="6" @bind="_otp" placeholder="000000" />
             <label class="check">
                 <input type="checkbox" @bind="_rememberDevice" />

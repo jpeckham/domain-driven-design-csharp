@@ -31,6 +31,7 @@ builder.Services.AddScoped<GetPostWithConversationQueryHandler>();
 builder.Services.AddScoped<SearchPostsQueryHandler>();
 builder.Services.AddScoped<BeginPostMediaUploadCommandHandler>();
 builder.Services.AddScoped<CompletePostMediaUploadCommandHandler>();
+builder.Services.AddScoped<GetPostMediaQueryHandler>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var secret = jwtSection["Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");

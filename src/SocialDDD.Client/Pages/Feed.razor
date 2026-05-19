@@ -34,10 +34,10 @@
                 </div>
                 <form @onsubmit="CreatePost">
                     <textarea @bind="_newContent" class="composer-input" placeholder="Share an update with your network." maxlength="280"></textarea>
-                    <MediaAttachmentStrip @bind-AssetIds="_newMediaAssetIds" />
+                    <MediaAttachmentStrip @key="_newMediaResetKey" @bind-AssetIds="_newMediaAssetIds" />
                     <div class="composer-submit-row">
                         <span>@(_newContent.Length) / 280</span>
-                        <button type="submit" disabled="@_busy">Post</button>
+                        <button type="submit" disabled="@IsPostDisabled">Post</button>
                     </div>
                 </form>
             </section>
@@ -133,6 +133,7 @@
     private string? _username;
     private string _newContent = "";
     private List<Guid> _newMediaAssetIds = [];
+    private int _newMediaResetKey;
     private Guid? _replyingTo;
     private string _replyContent = "";
     private List<Guid> _replyMediaAssetIds = [];
@@ -149,6 +150,8 @@
     private string _searchDraft = "";
     private string? _searchQuery;
     private string FeedTitle => string.IsNullOrWhiteSpace(_searchQuery) ? "Recent" : "Search";
+    private bool IsPostDisabled =>
+        _busy || (string.IsNullOrWhiteSpace(_newContent) && _newMediaAssetIds.Count == 0);
 
     protected override async Task OnInitializedAsync()
     {
@@ -220,14 +223,17 @@
 
     private async Task CreatePost()
     {
-        if (_currentUserId is null || string.IsNullOrWhiteSpace(_newContent)) return;
+        if (_currentUserId is null || IsPostDisabled) return;
 
         _busy = true;
-        await PostApi.CreateAsync(_currentUserId.Value, _newContent, _newMediaAssetIds);
-        Toasts.Success("Post created.");
-        _newContent = "";
-        _newMediaAssetIds = [];
-        await LoadFeedAsync();
+        if (await PostApi.CreateAsync(_currentUserId.Value, _newContent, _newMediaAssetIds))
+        {
+            Toasts.Success("Post created.");
+            _newContent = "";
+            _newMediaAssetIds = [];
+            _newMediaResetKey++;
+            await LoadFeedAsync();
+        }
         _busy = false;
     }
 

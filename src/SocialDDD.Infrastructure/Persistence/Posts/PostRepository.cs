@@ -176,6 +176,15 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
         return await context.Posts.Find(filter).FirstOrDefaultAsync(ct);
     }
 
+    public async Task<Post?> FindByMediaAssetIdAsync(Guid assetId, CancellationToken ct = default)
+    {
+        var filter = Builders<Post>.Filter.And(
+            Builders<Post>.Filter.ElemMatch(p => p.Media, m => m.AssetId == assetId),
+            Builders<Post>.Filter.Eq(p => p.IsDeleted, false));
+
+        return await context.Posts.Find(filter).FirstOrDefaultAsync(ct);
+    }
+
     public async Task<int> GetRepostCountAsync(PostId originalPostId, CancellationToken ct = default)
     {
         var filter = Builders<Post>.Filter.And(

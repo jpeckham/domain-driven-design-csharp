@@ -4,6 +4,8 @@ namespace SocialDDD.Infrastructure.PostMediaStorage;
 
 public sealed class LocalFilePostMediaStorageService(string baseDirectory) : IPostMediaStorageService
 {
+    private readonly string _baseDirectory = EnsureDirectory(baseDirectory);
+
     public Task<(string uploadUrl, string storageKey)> ReserveUploadAsync(
         Guid assetId, string contentType, CancellationToken ct)
     {
@@ -45,5 +47,11 @@ public sealed class LocalFilePostMediaStorageService(string baseDirectory) : IPo
         return Task.CompletedTask;
     }
 
-    private string FilePath(string storageKey) => Path.Combine(baseDirectory, storageKey);
+    private string FilePath(string storageKey) => Path.Combine(_baseDirectory, storageKey);
+
+    private static string EnsureDirectory(string directory)
+    {
+        Directory.CreateDirectory(directory);
+        return directory;
+    }
 }
