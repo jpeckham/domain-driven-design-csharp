@@ -98,8 +98,22 @@ public sealed class GetPostWithConversationQueryHandler(
         }
 
         var conversationById = new Dictionary<Guid, PostConversationDto>();
+        PostDto? rootParentPost = null;
+        if (rootPost.ParentPostId is not null)
+        {
+            var parentPost = await postRepository.GetByIdAsync(rootPost.ParentPostId, ct);
+            if (parentPost is not null)
+                rootParentPost = await ToDtoAsync(parentPost);
+        }
+
         foreach (var p in allPosts)
-            conversationById[p.Id.Value] = new PostConversationDto(await ToDtoAsync(p), new List<PostConversationDto>());
+        {
+            var parentPost = p.Id == rootPost.Id ? rootParentPost : null;
+            conversationById[p.Id.Value] = new PostConversationDto(
+                await ToDtoAsync(p),
+                new List<PostConversationDto>(),
+                parentPost);
+        }
 
         foreach (var post in descendants)
         {

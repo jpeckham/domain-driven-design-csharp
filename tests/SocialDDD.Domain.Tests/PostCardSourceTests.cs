@@ -24,6 +24,36 @@ public class PostCardSourceTests
         source.Should().Contain("OnRepost.InvokeAsync(Post.PostId)");
     }
 
+    [Fact]
+    public void PostCard_NavigatesToPostDetail_WhenClicked()
+    {
+        var source = ReadClientFile("Components", "PostCard.razor");
+
+        source.Should().Contain("@inject NavigationManager Nav");
+        source.Should().Contain("@onclick=\"OpenPost\"");
+        source.Should().Contain("Nav.NavigateTo($\"/posts/{Post.PostId}\")");
+    }
+
+    [Fact]
+    public void PostCard_ShareButton_PromptsWithAbsolutePostUrl()
+    {
+        var source = ReadClientFile("Components", "PostCard.razor");
+
+        source.Should().Contain("@inject IJSRuntime JS");
+        source.Should().Contain("share-button");
+        source.Should().Contain("SharePostAsync");
+        source.Should().Contain("Nav.ToAbsoluteUri($\"/posts/{Post.PostId}\").ToString()");
+        source.Should().Contain("JS.InvokeAsync<string?>(\"prompt\"");
+    }
+
+    [Fact]
+    public void PostCard_ActionButtons_DoNotTriggerCardNavigation()
+    {
+        var source = ReadClientFile("Components", "PostCard.razor");
+
+        source.Should().Contain("@onclick:stopPropagation=\"true\"");
+    }
+
     private static string ReadClientFile(params string[] pathParts)
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

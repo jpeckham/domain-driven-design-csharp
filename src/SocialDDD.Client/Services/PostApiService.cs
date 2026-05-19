@@ -132,7 +132,7 @@ public sealed class PostApiService(HttpClient http)
         string MediaUrl,
         int SortOrder);
 
-    public sealed record PostConversationDto(PostDto Post, List<PostConversationDto> Replies);
+    public sealed record PostConversationDto(PostDto Post, List<PostConversationDto> Replies, PostDto? ParentPost = null);
     public sealed record SearchResultsDto(List<PostDto> Posts, string Query, int Limit, int Offset);
     public sealed record BeginPostMediaUploadResult(Guid AssetId, string UploadUrl);
     public sealed record PendingMediaDto(Guid AssetId, string Kind, int? Width, int? Height, long? DurationMs, string? AltText);

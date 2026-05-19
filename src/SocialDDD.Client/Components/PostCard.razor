@@ -1,6 +1,8 @@
 @using SocialDDD.Client.Services
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 
-<article class="post">
+<article class="post" @onclick="OpenPost">
     <div class="post-header">
         <div class="post-author-block">
             <AuthorThumbnail DisplayName="@AuthorName" Handle="@AuthorHandle" ImageUrl="@Post.AuthorProfileImageUrl" />
@@ -9,7 +11,7 @@
         @if (IsOwner && OnDelete.HasDelegate)
         {
             <div class="actions">
-                <button type="button" class="secondary compact" @onclick="() => OnDelete.InvokeAsync(Post.PostId)">Delete</button>
+                <button type="button" class="secondary compact" @onclick="() => OnDelete.InvokeAsync(Post.PostId)" @onclick:stopPropagation="true">Delete</button>
             </div>
         }
     </div>
@@ -30,14 +32,17 @@
     <PostMediaGrid Media="@Post.Media" />
 
     <div class="post-actions" aria-label="Post actions">
-        <button type="button" class="heart-button @(Post.LikedByMe ? "liked" : "")" title="Like" @onclick="() => OnLike.InvokeAsync(Post.PostId)">
+        <button type="button" class="heart-button @(Post.LikedByMe ? "liked" : "")" title="Like" @onclick="() => OnLike.InvokeAsync(Post.PostId)" @onclick:stopPropagation="true">
             ♥ <span>@Post.LikeCount</span>
         </button>
-        <button type="button" class="reply-button" title="Reply" @onclick="() => OnReply.InvokeAsync(Post.PostId)">
+        <button type="button" class="reply-button" title="Reply" @onclick="() => OnReply.InvokeAsync(Post.PostId)" @onclick:stopPropagation="true">
             ↩ <span>@Post.ReplyCount</span>
         </button>
-        <button type="button" class="repost-button @(Post.IsRepostedByMe ? "liked" : "")" title="@RepostTitle" disabled="@IsRepost" @onclick="RepostAsync">
+        <button type="button" class="repost-button @(Post.IsRepostedByMe ? "liked" : "")" title="@RepostTitle" disabled="@IsRepost" @onclick="RepostAsync" @onclick:stopPropagation="true">
             ↻ <span>@Post.RepostCount</span>
+        </button>
+        <button type="button" class="share-button" title="Share" @onclick="SharePostAsync" @onclick:stopPropagation="true">
+            Share
         </button>
     </div>
 </article>
@@ -59,6 +64,17 @@
 
     private bool IsRepost => Post.OriginalPostId is not null;
     private string RepostTitle => IsRepost ? "Reposts cannot be reposted" : "Repost";
+
+    private void OpenPost()
+    {
+        Nav.NavigateTo($"/posts/{Post.PostId}");
+    }
+
+    private async Task SharePostAsync()
+    {
+        var url = Nav.ToAbsoluteUri($"/posts/{Post.PostId}").ToString();
+        await JS.InvokeAsync<string?>("prompt", "Copy post URL", url);
+    }
 
     private async Task RepostAsync()
     {
