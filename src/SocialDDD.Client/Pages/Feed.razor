@@ -99,10 +99,14 @@
                     @if (_replyingTo == post.PostId)
                     {
                         <form class="inline-composer" @onsubmit="SubmitReplyAsync">
-                            <textarea @bind="_replyContent" maxlength="280"></textarea>
+                            @if (!string.IsNullOrWhiteSpace(_replyTargetHandle))
+                            {
+                                <p class="reply-target">Replying to @_replyTargetHandle</p>
+                            }
+                            <textarea @bind="_replyContent" maxlength="@ReplyContentMaxLength"></textarea>
                             <MediaAttachmentStrip @bind-AssetIds="_replyMediaAssetIds" />
                             <div class="composer-submit-row">
-                                <span>@_replyContent.Length / 280</span>
+                                <span>@StoredReplyLength / 280</span>
                                 <button type="submit" disabled="@_busy">Reply</button>
                             </div>
                         </form>
@@ -136,6 +140,7 @@
     private int _newMediaResetKey;
     private Guid? _replyingTo;
     private string _replyContent = "";
+    private string? _replyTargetHandle;
     private List<Guid> _replyMediaAssetIds = [];
     private Guid? _reposting;
     private string _repostCommentary = "";
@@ -150,6 +155,9 @@
     private string _searchDraft = "";
     private string? _searchQuery;
     private string FeedTitle => string.IsNullOrWhiteSpace(_searchQuery) ? "Recent" : "Search";
+    private int ReplyPrefixLength => string.IsNullOrWhiteSpace(_replyTargetHandle) ? 0 : _replyTargetHandle.Length + 1;
+    private int ReplyContentMaxLength => Math.Max(1, 280 - ReplyPrefixLength);
+    private int StoredReplyLength => ReplyPrefixLength + _replyContent.Length;
     private bool IsPostDisabled =>
         _busy || (string.IsNullOrWhiteSpace(_newContent) && _newMediaAssetIds.Count == 0);
 
@@ -267,7 +275,8 @@
     {
         var post = _posts.FirstOrDefault(p => p.PostId == postId);
         _replyingTo = postId;
-        _replyContent = post?.AuthorHandle is { Length: > 0 } ? $"{post.AuthorHandle} " : "";
+        _replyTargetHandle = post?.AuthorHandle;
+        _replyContent = "";
         _replyMediaAssetIds = [];
     }
 
@@ -280,8 +289,13 @@
         {
             var parentIndex = _posts.FindIndex(p => p.PostId == _replyingTo.Value);
             if (parentIndex >= 0)
+            {
+                var parent = _posts[parentIndex];
+                _posts[parentIndex] = parent with { ReplyCount = parent.ReplyCount + 1 };
                 _posts.Insert(parentIndex + 1, reply);
+            }
             _replyingTo = null;
+            _replyTargetHandle = null;
             _replyContent = "";
             _replyMediaAssetIds = [];
         }

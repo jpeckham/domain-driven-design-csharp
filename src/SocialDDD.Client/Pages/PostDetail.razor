@@ -40,10 +40,14 @@
         }
 
         <form class="inline-composer" @onsubmit="SubmitReplyAsync">
-            <textarea @bind="_replyContent" maxlength="280"></textarea>
+            @if (!string.IsNullOrWhiteSpace(ReplyTargetHandle))
+            {
+                <p class="reply-target">Replying to @ReplyTargetHandle</p>
+            }
+            <textarea @bind="_replyContent" maxlength="@ReplyContentMaxLength"></textarea>
             <MediaAttachmentStrip @bind-AssetIds="_replyMediaAssetIds" />
             <div class="composer-submit-row">
-                <span>@_replyContent.Length / 280</span>
+                <span>@StoredReplyLength / 280</span>
                 <button type="submit" disabled="@_busy">Reply</button>
             </div>
         </form>
@@ -60,6 +64,10 @@
     private List<Guid> _replyMediaAssetIds = [];
     private bool _loading = true;
     private bool _busy;
+    private string? ReplyTargetHandle => FindPost(_replyingTo)?.AuthorHandle;
+    private int ReplyPrefixLength => string.IsNullOrWhiteSpace(ReplyTargetHandle) ? 0 : ReplyTargetHandle.Length + 1;
+    private int ReplyContentMaxLength => Math.Max(1, 280 - ReplyPrefixLength);
+    private int StoredReplyLength => ReplyPrefixLength + _replyContent.Length;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -67,9 +75,7 @@
         _currentUserId = await Auth.GetCurrentUserIdAsync();
         _conversation = await PostApi.GetPostWithConversationAsync(PostId);
         _replyingTo = PostId;
-        _replyContent = _conversation?.Post.AuthorHandle is { Length: > 0 }
-            ? $"{_conversation.Post.AuthorHandle} "
-            : "";
+        _replyContent = "";
         _loading = false;
     }
 
@@ -101,6 +107,7 @@
     {
         _replyingTo = postId;
         _replyContent = "";
+        _replyMediaAssetIds = [];
     }
 
     private async Task RepostAsync(Guid postId)
@@ -119,5 +126,15 @@
         _replyContent = "";
         _replyMediaAssetIds = [];
         _busy = false;
+    }
+
+    private PostApiService.PostDto? FindPost(Guid? postId)
+    {
+        if (postId is null || _conversation is null) return null;
+        if (_conversation.Post.PostId == postId.Value) return _conversation.Post;
+
+        return FlattenReplies(_conversation.Replies, 1)
+            .Select(item => item.Node.Post)
+            .FirstOrDefault(post => post.PostId == postId.Value);
     }
 }

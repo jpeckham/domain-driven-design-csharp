@@ -446,6 +446,13 @@ form {
     padding: 14px;
 }
 
+.reply-target {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+}
+
 .embedded-post {
     border: 1px solid var(--border);
     border-radius: 8px;

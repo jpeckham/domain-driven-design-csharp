@@ -3,6 +3,7 @@ using SocialDDD.Application.Posts.DTOs;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
+using System.Text.RegularExpressions;
 
 namespace SocialDDD.Application.Posts.Commands;
 
@@ -38,8 +39,7 @@ public sealed class CreateReplyCommandHandler(
         if (parentAuthor is not null)
         {
             var prefix = $"@{parentAuthor.Handle.Value} ";
-            if (!content.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                content = prefix + content;
+            content = prefix + StripLeadingMention(content);
         }
 
         var media = LoadAndValidateMedia(command.MediaAssetIds);
@@ -81,6 +81,9 @@ public sealed class CreateReplyCommandHandler(
             null,
             mediaDtos);
     }
+
+    private static string StripLeadingMention(string content) =>
+        Regex.Replace(content.TrimStart(), @"^@[a-zA-Z0-9_]{1,30}\s*", "");
 
     private IReadOnlyList<PostMedia>? LoadAndValidateMedia(IReadOnlyList<Guid>? assetIds)
     {
