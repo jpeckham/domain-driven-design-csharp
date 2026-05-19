@@ -4,7 +4,6 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 @inject IJSRuntime JS
-@inject UserApiService UserApi
 @inject ToastService Toasts
 
 <section class="workspace">
@@ -16,12 +15,6 @@
                 <p>Signed in as @_username</p>
             }
         </div>
-        @if (_username is not null)
-        {
-            <div class="actions">
-                <button type="button" class="secondary" @onclick="Logout">Log Out</button>
-            </div>
-        }
     </header>
 
     <div class="feed-layout">
@@ -87,15 +80,6 @@
                         OnLike="ToggleLikeAsync"
                         OnReply="OpenReply"
                         OnRepost="OpenRepost" />
-                    @if (_currentUserId != post.AuthorId && !string.IsNullOrWhiteSpace(post.AuthorHandle))
-                    {
-                        <div class="actions">
-                            <button type="button" class="secondary compact" @onclick="() => BlockFromFeedAsync(post.AuthorHandle!)">
-                                Block @post.AuthorHandle
-                            </button>
-                        </div>
-                    }
-
                     @if (_replyingTo == post.PostId)
                     {
                         <form class="inline-composer" @onsubmit="SubmitReplyAsync">
@@ -117,7 +101,7 @@
                             <textarea @bind="_repostCommentary" maxlength="280" placeholder="Add a comment"></textarea>
                             <div class="composer-submit-row">
                                 <span>@_repostCommentary.Length / 280</span>
-                                <button type="submit" disabled="@_busy">Quote repost</button>
+                                <button type="submit" disabled="@_busy">Repost</button>
                             </div>
                         </form>
                     }
@@ -315,12 +299,6 @@
 
         _reposting = postId;
         _repostCommentary = "";
-        if (await ConfirmAsync("Repost without commentary?"))
-        {
-            if (await PostApi.CreateRepostAsync(postId))
-                await LoadFeedAsync();
-            _reposting = null;
-        }
     }
 
     private async Task SubmitQuoteRepostAsync()
@@ -338,19 +316,4 @@
 
     private async Task<bool> ConfirmAsync(string message) =>
         await JS.InvokeAsync<bool>("confirm", message);
-
-    private async Task BlockFromFeedAsync(string handle)
-    {
-        if (!await UserApi.BlockUserAsync(handle))
-            return;
-        _posts = _posts.Where(p => p.AuthorHandle != handle).ToList();
-        Toasts.Success($"{handle} blocked.");
-    }
-
-    private async Task Logout()
-    {
-        await Auth.LogoutAsync();
-        _currentUserId = null;
-        _username = null;
-    }
 }

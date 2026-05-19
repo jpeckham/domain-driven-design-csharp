@@ -93,6 +93,22 @@ public class PostRepostTests
         repost.OriginalPostId.Should().Be(original.Id);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void CreateRepost_BlankCommentary_ContentIsNull(string commentary)
+    {
+        var original = AnyPost();
+        var originalAuthorHandle = AnyHandle("alice");
+        var reposterUserId = AnyAuthor();
+        var reposterHandle = AnyHandle("bob");
+
+        var repost = Post.CreateRepost(original, originalAuthorHandle, reposterUserId, reposterHandle, commentary);
+
+        repost.Content.Should().BeNull();
+        repost.OriginalPostId.Should().Be(original.Id);
+    }
+
     [Fact]
     public void CreateRepost_RepostOfRepost_ThrowsDomainException()
     {

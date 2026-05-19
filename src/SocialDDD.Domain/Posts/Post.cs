@@ -86,10 +86,12 @@ public sealed partial class Post : AggregateRoot<PostId>
             throw new DomainException("Cannot repost a repost.");
         if (reposterHandle == originalAuthorHandle)
             throw new DomainException("Cannot repost your own post.");
-        if (commentary is not null && commentary.Length > 280)
+
+        var normalizedCommentary = string.IsNullOrWhiteSpace(commentary) ? null : commentary;
+        if (normalizedCommentary is not null && normalizedCommentary.Length > 280)
             throw new DomainValidationException("Repost commentary must be 280 characters or fewer.");
 
-        PostContent? content = commentary is not null ? new PostContent(commentary) : null;
+        PostContent? content = normalizedCommentary is not null ? new PostContent(normalizedCommentary) : null;
 
         var post = new Post
         {

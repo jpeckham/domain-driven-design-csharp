@@ -36,7 +36,7 @@
         <button type="button" class="reply-button" title="Reply" @onclick="() => OnReply.InvokeAsync(Post.PostId)">
             ↩ <span>@Post.ReplyCount</span>
         </button>
-        <button type="button" class="repost-button @(Post.IsRepostedByMe ? "liked" : "")" title="Repost" @onclick="() => OnRepost.InvokeAsync(Post.PostId)">
+        <button type="button" class="repost-button @(Post.IsRepostedByMe ? "liked" : "")" title="@RepostTitle" disabled="@IsRepost" @onclick="RepostAsync">
             ↻ <span>@Post.RepostCount</span>
         </button>
     </div>
@@ -56,4 +56,13 @@
     private string AuthorHandle => string.IsNullOrWhiteSpace(Post.AuthorHandle)
         ? $"@{Post.AuthorId.ToString()[..8]}"
         : Post.AuthorHandle;
+
+    private bool IsRepost => Post.OriginalPostId is not null;
+    private string RepostTitle => IsRepost ? "Reposts cannot be reposted" : "Repost";
+
+    private async Task RepostAsync()
+    {
+        if (IsRepost) return;
+        await OnRepost.InvokeAsync(Post.PostId);
+    }
 }
