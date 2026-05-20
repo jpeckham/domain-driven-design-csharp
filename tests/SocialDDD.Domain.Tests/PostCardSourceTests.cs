@@ -54,6 +54,19 @@ public class PostCardSourceTests
         source.Should().Contain("@onclick:stopPropagation=\"true\"");
     }
 
+    [Fact]
+    public void PostCard_RendersQuotedPostBeforeRepostContent()
+    {
+        var source = ReadClientFile("Components", "PostCard.razor");
+
+        source.Should().Contain("class=\"quoted-post\"");
+        source.Should().Contain("<PostMediaGrid Media=\"@Post.OriginalPost.Media\" />");
+        source.Should().Contain("class=\"repost-content\"");
+
+        source.IndexOf("class=\"quoted-post\"", StringComparison.Ordinal)
+            .Should().BeLessThan(source.IndexOf("class=\"repost-content\"", StringComparison.Ordinal));
+    }
+
     private static string ReadClientFile(params string[] pathParts)
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

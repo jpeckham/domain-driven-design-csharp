@@ -461,6 +461,27 @@ form {
     padding: 12px;
 }
 
+.quoted-post {
+    background: var(--surface-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    margin-top: 12px;
+    padding: 12px;
+}
+
+.quoted-post span {
+    color: var(--muted);
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.repost-content {
+    margin-top: 12px;
+}
+
 .post-media-grid {
     display: grid;
     gap: 6px;

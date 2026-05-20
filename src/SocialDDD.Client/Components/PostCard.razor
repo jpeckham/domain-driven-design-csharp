@@ -16,17 +16,24 @@
         }
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(Post.Content))
-    {
-        <PostContent Content="@Post.Content" />
-    }
-
     @if (Post.OriginalPost is not null)
     {
-        <div class="embedded-post">
+        <div class="quoted-post">
             <span>Reposted by @AuthorHandle</span>
             <PostContent Content="@Post.OriginalPost.Content" />
+            <PostMediaGrid Media="@Post.OriginalPost.Media" />
         </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Post.Content) && Post.OriginalPost is not null)
+    {
+        <div class="repost-content">
+            <PostContent Content="@Post.Content" />
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Post.Content))
+    {
+        <PostContent Content="@Post.Content" />
     }
 
     <PostMediaGrid Media="@Post.Media" />

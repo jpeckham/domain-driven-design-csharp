@@ -57,7 +57,8 @@ public sealed class CreateRepostCommandHandler(
             originalPost.OriginalPostId?.Value,
             origRepostCount,
             false,
-            null);
+            null,
+            ToMediaDtos(originalPost));
 
         return new PostDto(
             repost.Id.Value,
@@ -75,4 +76,20 @@ public sealed class CreateRepostCommandHandler(
             false,
             originalPostDto);
     }
+
+    private static List<PostMediaDto>? ToMediaDtos(Post post) =>
+        post.Media.Count == 0
+            ? null
+            : post.Media
+                .OrderBy(m => m.SortOrder)
+                .Select(m => new PostMediaDto(
+                    m.AssetId,
+                    m.Kind.ToString(),
+                    m.AltText,
+                    m.Width,
+                    m.Height,
+                    m.DurationMs,
+                    $"/api/post-media/{m.AssetId}",
+                    m.SortOrder))
+                .ToList();
 }
