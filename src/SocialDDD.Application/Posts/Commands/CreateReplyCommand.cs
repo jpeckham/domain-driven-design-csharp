@@ -87,7 +87,10 @@ public sealed class CreateReplyCommandHandler(
             0,
             false,
             null,
-            mediaDtos);
+            mediaDtos,
+            author.DisplayName.Value,
+            author.Handle.Display,
+            author.ProfileImage is null ? null : $"/api/profile-images/{author.ProfileImage.AssetId}");
     }
 
     private static string StripLeadingMention(string content) =>

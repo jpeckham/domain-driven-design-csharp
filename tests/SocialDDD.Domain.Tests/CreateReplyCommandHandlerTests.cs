@@ -59,13 +59,32 @@ public class CreateReplyCommandHandlerTests
         postRepository.IncrementedReplyCountPostIds.Should().Equal([root.Id, firstReply.Id]);
     }
 
-    private static User MakeUser(string handle) =>
+    [Fact]
+    public async Task HandleAsync_ReturnsReplyWithAuthorDisplayData()
+    {
+        var parentAuthor = MakeUser("alice");
+        var replyAuthor = MakeUser("bob", "Bob Builder");
+        var parent = Post.Create(parentAuthor.Id, new PostContent("Original post"));
+        var handler = new CreateReplyCommandHandler(
+            new CapturingPostRepository(parent),
+            new UserRepositoryStub(parentAuthor, replyAuthor),
+            new NoOpDispatcher(),
+            new EmptyPendingMediaStore());
+
+        var result = await handler.HandleAsync(
+            new CreateReplyCommand(parent.Id.Value, replyAuthor.Id.Value, "Thanks"));
+
+        result.AuthorDisplayName.Should().Be("Bob Builder");
+        result.AuthorHandle.Should().Be("@bob");
+    }
+
+    private static User MakeUser(string handle, string? displayName = null) =>
         User.RegisterImmediate(
             new Username(handle),
             new Email($"{handle}@example.com"),
             new PasswordHash("hash"),
             new Handle(handle),
-            new DisplayName(handle));
+            new DisplayName(displayName ?? handle));
 
     private sealed class CapturingPostRepository(params Post[] posts) : IPostRepository
     {
