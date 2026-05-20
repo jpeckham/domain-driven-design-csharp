@@ -20,6 +20,8 @@ public sealed partial class Post : AggregateRoot<PostId>
     public bool IsDeleted { get; private set; }
     public PostId? ParentPostId { get; private set; }
     public PostId? OriginalPostId { get; private set; }
+    public int ReplyCount { get; private set; }
+    public IReadOnlyList<PostId> AncestorPostIds { get; private set; } = [];
 
     public HashSet<Handle> LikedBy { get; private set; } = new();
     public HashSet<Handle> Mentions { get; private set; } = new();
@@ -55,7 +57,8 @@ public sealed partial class Post : AggregateRoot<PostId>
 
     public static Post CreateReply(
         PostId parentPostId, UserId authorId, Handle authorHandle, PostContent content,
-        IReadOnlyList<PostMedia>? media = null)
+        IReadOnlyList<PostMedia>? media = null,
+        IReadOnlyList<PostId>? ancestorPostIds = null)
     {
         var post = new Post
         {
@@ -64,7 +67,8 @@ public sealed partial class Post : AggregateRoot<PostId>
             Content = content,
             PostedAt = DateTime.UtcNow,
             IsDeleted = false,
-            ParentPostId = parentPostId
+            ParentPostId = parentPostId,
+            AncestorPostIds = ancestorPostIds?.ToList() ?? []
         };
         post.ExtractMentionsAndHashtags(authorId: authorHandle);
         if (media is { Count: > 0 })
@@ -162,4 +166,5 @@ public sealed partial class Post : AggregateRoot<PostId>
 
         Media = media.Select((m, i) => m with { SortOrder = i }).ToList();
     }
+
 }

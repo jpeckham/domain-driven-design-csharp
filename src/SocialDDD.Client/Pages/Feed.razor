@@ -272,18 +272,39 @@
         if (reply is not null)
         {
             var parentIndex = _posts.FindIndex(p => p.PostId == _replyingTo.Value);
+            var ancestorIds = GetVisibleAncestorIds(_replyingTo.Value);
+            _posts = _posts
+                .Select(post => ancestorIds.Contains(post.PostId)
+                    ? post with { ReplyCount = post.ReplyCount + 1 }
+                    : post)
+                .ToList();
+
             if (parentIndex >= 0)
-            {
-                var parent = _posts[parentIndex];
-                _posts[parentIndex] = parent with { ReplyCount = parent.ReplyCount + 1 };
                 _posts.Insert(parentIndex + 1, reply);
-            }
+
             _replyingTo = null;
             _replyTargetHandle = null;
             _replyContent = "";
             _replyMediaAssetIds = [];
         }
         _busy = false;
+    }
+
+    private HashSet<Guid> GetVisibleAncestorIds(Guid postId)
+    {
+        var ancestorIds = new HashSet<Guid>();
+        var currentPostId = postId;
+
+        while (ancestorIds.Add(currentPostId))
+        {
+            var current = _posts.FirstOrDefault(p => p.PostId == currentPostId);
+            if (current?.ParentPostId is null)
+                break;
+
+            currentPostId = current.ParentPostId.Value;
+        }
+
+        return ancestorIds;
     }
 
     private async Task OpenRepost(Guid postId)

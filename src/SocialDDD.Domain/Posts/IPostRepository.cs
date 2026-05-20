@@ -22,6 +22,7 @@ public interface IPostRepository
     Task<IReadOnlyList<Post>> GetRepliesAsync(PostId parentPostId, int limit, CancellationToken ct = default);
     Task<IReadOnlyList<Post>> GetConversationAsync(PostId rootPostId, int depthLimit, int repliesPerLevel, CancellationToken ct = default);
     Task<int> CountRepliesAsync(PostId parentPostId, CancellationToken ct = default);
+    Task IncrementReplyCountsAsync(IReadOnlyList<PostId> postIds, CancellationToken ct = default);
     Task<Post?> FindRepostAsync(PostId originalPostId, UserId reposterUserId, CancellationToken ct = default);
     Task<Post?> FindByMediaAssetIdAsync(Guid assetId, CancellationToken ct = default);
     Task<int> GetRepostCountAsync(PostId originalPostId, CancellationToken ct = default);

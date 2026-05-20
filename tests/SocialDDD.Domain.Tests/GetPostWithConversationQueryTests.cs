@@ -53,6 +53,7 @@ public class GetPostWithConversationQueryTests
         public Task<IReadOnlyList<Post>> GetConversationAsync(PostId rootPostId, int depthLimit, int repliesPerLevel, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Post>>(posts.Where(p => p.ParentPostId == rootPostId && !p.IsDeleted).ToList());
         public Task<int> CountRepliesAsync(PostId parentPostId, CancellationToken ct = default) => Task.FromResult(0);
+        public Task IncrementReplyCountsAsync(IReadOnlyList<PostId> postIds, CancellationToken ct = default) => Task.CompletedTask;
         public Task<Post?> FindRepostAsync(PostId originalPostId, UserId reposterUserId, CancellationToken ct = default) => Task.FromResult<Post?>(null);
         public Task<Post?> FindByMediaAssetIdAsync(Guid assetId, CancellationToken ct = default) => Task.FromResult<Post?>(null);
         public Task<int> GetRepostCountAsync(PostId originalPostId, CancellationToken ct = default) => Task.FromResult(0);

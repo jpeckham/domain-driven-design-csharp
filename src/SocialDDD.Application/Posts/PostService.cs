@@ -174,7 +174,6 @@ public sealed class PostService(
         var author = await userRepository.GetByIdAsync(post.AuthorId, ct);
         bool likedByMe = requesterHandle is not null
             && await postRepository.IsLikedByAsync(post.Id, requesterHandle, ct);
-        int replyCount = await postRepository.CountRepliesAsync(post.Id, ct);
         int repostCount = await postRepository.GetRepostCountAsync(post.Id, ct);
         bool isRepostedByMe = requesterUserId is not null
             && await postRepository.FindRepostAsync(post.Id, requesterUserId, ct) is not null;
@@ -210,7 +209,7 @@ public sealed class PostService(
             post.LikeCount,
             likedByMe,
             post.ParentPostId?.Value,
-            replyCount,
+            post.ReplyCount,
             post.Mentions.Select(h => h.Value).ToList(),
             post.Hashtags.ToList(),
             post.OriginalPostId?.Value,

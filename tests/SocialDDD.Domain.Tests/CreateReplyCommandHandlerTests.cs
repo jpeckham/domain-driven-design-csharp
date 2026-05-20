@@ -31,6 +31,34 @@ public class CreateReplyCommandHandlerTests
         postRepository.AddedPost!.Content!.Value.Should().Be("@alice thanks for this");
     }
 
+    [Fact]
+    public async Task HandleAsync_ReplyToNestedReply_IncrementsEveryAncestorReplyCount()
+    {
+        var rootAuthor = MakeUser("alice");
+        var firstReplyAuthor = MakeUser("bob");
+        var secondReplyAuthor = MakeUser("charlie");
+        var root = Post.Create(rootAuthor.Id, new PostContent("Root post"));
+        var firstReply = Post.CreateReply(
+            root.Id,
+            firstReplyAuthor.Id,
+            firstReplyAuthor.Handle,
+            new PostContent("@alice First reply"),
+            ancestorPostIds: [root.Id]);
+        var postRepository = new CapturingPostRepository(root, firstReply);
+        var userRepository = new UserRepositoryStub(rootAuthor, firstReplyAuthor, secondReplyAuthor);
+        var handler = new CreateReplyCommandHandler(
+            postRepository,
+            userRepository,
+            new NoOpDispatcher(),
+            new EmptyPendingMediaStore());
+
+        await handler.HandleAsync(
+            new CreateReplyCommand(firstReply.Id.Value, secondReplyAuthor.Id.Value, "Nested reply"));
+
+        postRepository.AddedPost!.AncestorPostIds.Should().Equal([root.Id, firstReply.Id]);
+        postRepository.IncrementedReplyCountPostIds.Should().Equal([root.Id, firstReply.Id]);
+    }
+
     private static User MakeUser(string handle) =>
         User.RegisterImmediate(
             new Username(handle),
@@ -39,9 +67,10 @@ public class CreateReplyCommandHandlerTests
             new Handle(handle),
             new DisplayName(handle));
 
-    private sealed class CapturingPostRepository(Post parentPost) : IPostRepository
+    private sealed class CapturingPostRepository(params Post[] posts) : IPostRepository
     {
         public Post? AddedPost { get; private set; }
+        public IReadOnlyList<PostId> IncrementedReplyCountPostIds { get; private set; } = [];
 
         public Task AddAsync(Post post, CancellationToken ct = default)
         {
@@ -50,7 +79,7 @@ public class CreateReplyCommandHandlerTests
         }
 
         public Task<Post?> GetByIdAsync(PostId id, CancellationToken ct = default) =>
-            Task.FromResult(id == parentPost.Id ? parentPost : null);
+            Task.FromResult(posts.FirstOrDefault(p => p.Id == id));
 
         public Task<IReadOnlyList<Post>> GetByAuthorAsync(UserId authorId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Post>>([]);
         public Task<IReadOnlyList<Post>> GetByAuthorAsync(UserId authorId, int limit, int offset, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Post>>([]);
@@ -62,6 +91,11 @@ public class CreateReplyCommandHandlerTests
         public Task<IReadOnlyList<Post>> GetRepliesAsync(PostId parentPostId, int limit, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Post>>([]);
         public Task<IReadOnlyList<Post>> GetConversationAsync(PostId rootPostId, int depthLimit, int repliesPerLevel, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Post>>([]);
         public Task<int> CountRepliesAsync(PostId parentPostId, CancellationToken ct = default) => Task.FromResult(0);
+        public Task IncrementReplyCountsAsync(IReadOnlyList<PostId> postIds, CancellationToken ct = default)
+        {
+            IncrementedReplyCountPostIds = postIds;
+            return Task.CompletedTask;
+        }
         public Task<Post?> FindRepostAsync(PostId originalPostId, UserId reposterUserId, CancellationToken ct = default) => Task.FromResult<Post?>(null);
         public Task<Post?> FindByMediaAssetIdAsync(Guid assetId, CancellationToken ct = default) => Task.FromResult<Post?>(null);
         public Task<int> GetRepostCountAsync(PostId originalPostId, CancellationToken ct = default) => Task.FromResult(0);

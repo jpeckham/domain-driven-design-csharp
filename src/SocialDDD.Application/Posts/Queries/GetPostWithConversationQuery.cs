@@ -26,18 +26,12 @@ public sealed class GetPostWithConversationQueryHandler(
             postId, query.DepthLimit, query.RepliesPerLevel, ct);
 
         var allPosts = new List<Post> { rootPost }.Concat(descendants).ToList();
-        var replyCountByParent = allPosts
-            .Where(p => p.ParentPostId is not null)
-            .GroupBy(p => p.ParentPostId!.Value)
-            .ToDictionary(g => g.Key, g => g.Count());
-
         Handle? requester = requesterHandle is not null ? new Handle(requesterHandle) : null;
         UserId? requesterUserIdTyped = requesterUserId.HasValue ? UserId.From(requesterUserId.Value) : null;
 
         async Task<PostDto> ToDtoAsync(Post p)
         {
             var author = await userRepository.GetByIdAsync(p.AuthorId, ct);
-            replyCountByParent.TryGetValue(p.Id.Value, out var replyCount);
             bool likedByMe = requester is not null
                 && await postRepository.IsLikedByAsync(p.Id, requester, ct);
             int repostCount = await postRepository.GetRepostCountAsync(p.Id, ct);
@@ -62,7 +56,7 @@ public sealed class GetPostWithConversationQueryHandler(
                         orig.LikeCount,
                         origLikedByMe,
                         orig.ParentPostId?.Value,
-                        0,
+                        orig.ReplyCount,
                         orig.Mentions.Select(h => h.Value).ToList(),
                         orig.Hashtags.ToList(),
                         orig.OriginalPostId?.Value,
@@ -84,7 +78,7 @@ public sealed class GetPostWithConversationQueryHandler(
                 p.LikeCount,
                 likedByMe,
                 p.ParentPostId?.Value,
-                replyCount,
+                p.ReplyCount,
                 p.Mentions.Select(h => h.Value).ToList(),
                 p.Hashtags.ToList(),
                 p.OriginalPostId?.Value,

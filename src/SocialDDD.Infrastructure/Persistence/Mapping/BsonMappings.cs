@@ -96,6 +96,8 @@ internal static class BsonMappings
             cm.MapMember(p => p.LikedBy).SetElementName("likedBy");
             cm.MapMember(p => p.ParentPostId).SetElementName("parentPostId");
             cm.MapMember(p => p.OriginalPostId).SetElementName("originalPostId");
+            cm.MapMember(p => p.ReplyCount).SetElementName("replyCount");
+            cm.MapMember(p => p.AncestorPostIds).SetElementName("ancestorPostIds");
             cm.MapMember(p => p.Mentions).SetElementName("mentions");
             cm.MapMember(p => p.Hashtags).SetElementName("hashtags");
             cm.MapMember(p => p.Media).SetElementName("media");

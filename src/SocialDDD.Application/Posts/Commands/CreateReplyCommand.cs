@@ -44,9 +44,17 @@ public sealed class CreateReplyCommandHandler(
 
         var media = LoadAndValidateMedia(command.MediaAssetIds);
         var postContent = new PostContent(content);
-        var reply = Post.CreateReply(parentPostId, UserId.From(command.AuthorUserId), authorHandle, postContent, media);
+        var ancestorPostIds = parentPost.AncestorPostIds.Concat([parentPost.Id]).ToList();
+        var reply = Post.CreateReply(
+            parentPostId,
+            UserId.From(command.AuthorUserId),
+            authorHandle,
+            postContent,
+            media,
+            ancestorPostIds);
 
         await postRepository.AddAsync(reply, ct);
+        await postRepository.IncrementReplyCountsAsync(ancestorPostIds, ct);
         await eventDispatcher.DispatchAsync(reply.PopDomainEvents(), ct);
 
         var mediaDtos = reply.Media.Count > 0

@@ -166,6 +166,16 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
         return (int)await context.Posts.CountDocumentsAsync(filter, cancellationToken: ct);
     }
 
+    public Task IncrementReplyCountsAsync(IReadOnlyList<PostId> postIds, CancellationToken ct = default)
+    {
+        if (postIds.Count == 0)
+            return Task.CompletedTask;
+
+        var filter = Builders<Post>.Filter.In(p => p.Id, postIds);
+        var update = Builders<Post>.Update.Inc(p => p.ReplyCount, 1);
+        return context.Posts.UpdateManyAsync(filter, update, cancellationToken: ct);
+    }
+
     public async Task<Post?> FindRepostAsync(PostId originalPostId, UserId reposterUserId, CancellationToken ct = default)
     {
         var filter = Builders<Post>.Filter.And(

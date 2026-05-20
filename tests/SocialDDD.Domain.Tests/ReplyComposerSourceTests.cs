@@ -28,7 +28,21 @@ public class ReplyComposerSourceTests
             "Pages",
             "Feed.razor"));
 
-        source.Should().Contain("ReplyCount = parent.ReplyCount + 1");
+        source.Should().Contain("post with { ReplyCount = post.ReplyCount + 1 }");
+    }
+
+    [Fact]
+    public void FeedReplySubmission_IncrementsVisibleAncestorReplyCountsOptimistically()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "SocialDDD.Client",
+            "Pages",
+            "Feed.razor"));
+
+        source.Should().Contain("GetVisibleAncestorIds");
+        source.Should().Contain("ancestorIds.Contains(post.PostId)");
     }
 
     [Fact]
