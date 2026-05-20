@@ -17,11 +17,16 @@ internal sealed class MongoDbRememberedDeviceRepository(MongoDbContext context) 
 
     public Task RememberAsync(UserId userId, DeviceId deviceId, CancellationToken ct = default)
     {
-        var doc = new RememberedDeviceDocument(userId.Value.ToString(), deviceId.Value);
-        return context.RememberedDevices.ReplaceOneAsync(
-            d => d.UserId == doc.UserId && d.DeviceId == doc.DeviceId,
-            doc,
-            new ReplaceOptions { IsUpsert = true },
+        var userKey = userId.Value.ToString();
+        var deviceKey = deviceId.Value;
+        var update = Builders<RememberedDeviceDocument>.Update
+            .Set(d => d.UserId, userKey)
+            .Set(d => d.DeviceId, deviceKey);
+
+        return context.RememberedDevices.UpdateOneAsync(
+            d => d.UserId == userKey && d.DeviceId == deviceKey,
+            update,
+            new UpdateOptions { IsUpsert = true },
             ct);
     }
 }

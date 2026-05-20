@@ -7,9 +7,11 @@ using SocialDDD.Domain.Blocks;
 using SocialDDD.Domain.Follows;
 using SocialDDD.Domain.Posts;
 using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Users.Events;
 using SocialDDD.Infrastructure.Auth;
 using SocialDDD.Infrastructure.Emails;
 using SocialDDD.Infrastructure.Events;
+using SocialDDD.Infrastructure.Events.Handlers;
 using SocialDDD.Infrastructure.Persistence;
 using SocialDDD.Infrastructure.Persistence.Blocks;
 using SocialDDD.Infrastructure.Persistence.Follows;
@@ -64,6 +66,10 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        services.AddScoped<IDomainEventHandler<UserRegistered>, SendUserRegisteredVerificationEmailHandler>();
+        services.AddScoped<IDomainEventHandler<UserVerificationRequested>, SendUserVerificationRequestedEmailHandler>();
+        services.AddScoped<IDomainEventHandler<PasswordResetRequested>, SendPasswordResetRequestedEmailHandler>();
+        services.AddScoped<IDomainEventHandler<LoginChallenged>, SendLoginChallengedEmailHandler>();
 
         // Email service: "AzureCommunication" or "Console" (default)
         var emailService = configuration["Features:EmailService"] ?? "Console";

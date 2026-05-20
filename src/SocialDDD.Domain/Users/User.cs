@@ -35,7 +35,7 @@ public sealed class User : AggregateRoot<UserId>
             RegisteredAt = DateTime.UtcNow,
             Status = UserStatus.Pending
         };
-        user.RaiseDomainEvent(new UserRegistered(user.Id, handle, displayName));
+        user.RaiseDomainEvent(new UserRegistered(user.Id, email, handle, displayName));
         return user;
     }
 
@@ -57,7 +57,7 @@ public sealed class User : AggregateRoot<UserId>
             RegisteredAt = DateTime.UtcNow,
             Status = UserStatus.Active
         };
-        user.RaiseDomainEvent(new UserRegistered(user.Id, handle, displayName));
+        user.RaiseDomainEvent(new UserRegistered(user.Id, email, handle, displayName));
         return user;
     }
 

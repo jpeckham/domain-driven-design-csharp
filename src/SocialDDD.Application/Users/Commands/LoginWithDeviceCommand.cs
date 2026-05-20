@@ -3,6 +3,7 @@ using SocialDDD.Application.Interfaces;
 using SocialDDD.Application.Users.DTOs;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Users.Events;
 
 namespace SocialDDD.Application.Users.Commands;
 
@@ -25,7 +26,7 @@ public sealed class LoginWithDeviceCommand(
     IPasswordHasher passwordHasher,
     IRememberedDeviceRepository rememberedDeviceRepository,
     IOtpRepository otpRepository,
-    IEmailService emailService,
+    IDomainEventDispatcher eventDispatcher,
     ITokenService tokenService)
 {
     public async Task<LoginWithDeviceResult> ExecuteAsync(LoginWithDeviceRequest request, CancellationToken ct = default)
@@ -49,7 +50,9 @@ public sealed class LoginWithDeviceCommand(
 
         var otp = new OneTimePasscode(GenerateOtp(), DateTimeOffset.UtcNow.AddMinutes(10));
         await otpRepository.SaveAsync(user.Id, deviceId, otp, ct);
-        await emailService.SendOtpEmailAsync(user.Email.Value, otp.Code, ct);
+        await eventDispatcher.DispatchAsync(
+            [new LoginChallenged(user.Id, user.Email, deviceId, otp.Code)],
+            ct);
 
         return new LoginWithDeviceResult.OtpRequired();
     }

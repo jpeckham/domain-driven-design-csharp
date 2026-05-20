@@ -110,13 +110,13 @@ public class RequestPasswordResetHandlerTests
     {
         var userRepo = new FakeUserRepoForReset(null);
         var tokenRepo = new FakePasswordResetTokenRepo();
-        var emailSvc = new FakePasswordResetEmailService();
+        var dispatcher = new FakeDispatcherForReset();
 
-        var handler = new RequestPasswordResetCommand(userRepo, tokenRepo, emailSvc);
+        var handler = new RequestPasswordResetCommand(userRepo, tokenRepo, dispatcher);
         // Should not throw
         await handler.ExecuteAsync("nobody@example.com");
 
-        emailSvc.ResetEmailSentCount.Should().Be(0);
+        dispatcher.DispatchedEvents.Should().BeEmpty();
         tokenRepo.SavedCount.Should().Be(0);
     }
 
@@ -126,14 +126,16 @@ public class RequestPasswordResetHandlerTests
         var user = MakeActiveUser();
         var userRepo = new FakeUserRepoForReset(user);
         var tokenRepo = new FakePasswordResetTokenRepo();
-        var emailSvc = new FakePasswordResetEmailService();
+        var dispatcher = new FakeDispatcherForReset();
 
-        var handler = new RequestPasswordResetCommand(userRepo, tokenRepo, emailSvc);
+        var handler = new RequestPasswordResetCommand(userRepo, tokenRepo, dispatcher);
         await handler.ExecuteAsync("alice@example.com");
 
-        emailSvc.ResetEmailSentCount.Should().Be(1);
         tokenRepo.SavedCount.Should().Be(1);
         tokenRepo.LastToken.Should().NotBeNullOrEmpty();
+        dispatcher.DispatchedEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<PasswordResetRequested>()
+            .Which.Token.Should().Be(tokenRepo.LastToken);
     }
 
     [Fact]
@@ -141,13 +143,13 @@ public class RequestPasswordResetHandlerTests
     {
         var userRepo = new FakeUserRepoForReset(null);
         var tokenRepo = new FakePasswordResetTokenRepo();
-        var emailSvc = new FakePasswordResetEmailService();
+        var dispatcher = new FakeDispatcherForReset();
 
-        var handler = new RequestPasswordResetCommand(userRepo, tokenRepo, emailSvc);
+        var handler = new RequestPasswordResetCommand(userRepo, tokenRepo, dispatcher);
         // Invalid email — should silently succeed without throwing
         await handler.ExecuteAsync("not-an-email");
 
-        emailSvc.ResetEmailSentCount.Should().Be(0);
+        dispatcher.DispatchedEvents.Should().BeEmpty();
     }
 }
 
@@ -321,23 +323,11 @@ file sealed class FakePasswordHasherForReset : IPasswordHasher
 
 file sealed class FakeDispatcherForReset : IDomainEventDispatcher
 {
+    public IReadOnlyList<IDomainEvent> DispatchedEvents { get; private set; } = [];
+
     public Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken ct = default)
-        => Task.CompletedTask;
-}
-
-file sealed class FakePasswordResetEmailService : IEmailService
-{
-    public int ResetEmailSentCount { get; private set; }
-
-    public Task SendVerificationEmailAsync(string toEmail, string code, CancellationToken ct = default)
-        => Task.CompletedTask;
-
-    public Task SendOtpEmailAsync(string toEmail, string otp, CancellationToken ct = default)
-        => Task.CompletedTask;
-
-    public Task SendPasswordResetEmailAsync(string toEmail, string token, CancellationToken ct = default)
     {
-        ResetEmailSentCount++;
+        DispatchedEvents = events;
         return Task.CompletedTask;
     }
 }

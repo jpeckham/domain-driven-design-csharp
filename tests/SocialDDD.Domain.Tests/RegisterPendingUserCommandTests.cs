@@ -16,13 +16,12 @@ public sealed class RegisterPendingUserCommandTests
         var user = MakePendingUser();
         var userRepo = new FakeUserRepository(user);
         var codeRepo = new FakeVerificationCodeRepository();
-        var emailService = new FakeEmailService();
+        var dispatcher = new FakeDispatcher();
         var command = new RegisterPendingUserCommand(
             userRepo,
             codeRepo,
             new FakePasswordHasher(),
-            emailService,
-            new FakeDispatcher());
+            dispatcher);
 
         await command.ExecuteAsync(new RegisterPendingRequest("", "alice@example.com", "", "", ""));
 
@@ -30,8 +29,9 @@ public sealed class RegisterPendingUserCommandTests
         codeRepo.SavedUserId.Should().Be(user.Id);
         codeRepo.SavedCode.Should().NotBeNull();
         codeRepo.SavedCode!.Code.Should().HaveLength(6);
-        emailService.VerificationEmail.Should().Be("alice@example.com");
-        emailService.VerificationCode.Should().Be(codeRepo.SavedCode.Code);
+        dispatcher.DispatchedEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<SocialDDD.Domain.Users.Events.UserVerificationRequested>()
+            .Which.Code.Should().Be(codeRepo.SavedCode.Code);
     }
 
     [Fact]
@@ -43,19 +43,41 @@ public sealed class RegisterPendingUserCommandTests
 
         var userRepo = new FakeUserRepository(user);
         var codeRepo = new FakeVerificationCodeRepository();
-        var emailService = new FakeEmailService();
         var command = new RegisterPendingUserCommand(
             userRepo,
             codeRepo,
             new FakePasswordHasher(),
-            emailService,
             new FakeDispatcher());
 
         var act = () => command.ExecuteAsync(new RegisterPendingRequest("", "alice@example.com", "", "", ""));
 
         await act.Should().ThrowAsync<DomainException>().WithMessage("*already registered*");
         codeRepo.SavedCode.Should().BeNull();
-        emailService.VerificationEmail.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Execute_NewUser_DispatchesUserRegisteredEventAndDoesNotSendEmailInline()
+    {
+        var userRepo = new FakeUserRepository(null);
+        var codeRepo = new FakeVerificationCodeRepository();
+        var dispatcher = new FakeDispatcher();
+        var command = new RegisterPendingUserCommand(
+            userRepo,
+            codeRepo,
+            new FakePasswordHasher(),
+            dispatcher);
+
+        await command.ExecuteAsync(new RegisterPendingRequest(
+            "alice",
+            "alice@example.com",
+            "Password123",
+            "alice",
+            "Alice"));
+
+        codeRepo.SavedCode.Should().BeNull();
+        dispatcher.DispatchedEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<SocialDDD.Domain.Users.Events.UserRegistered>()
+            .Which.Email.Value.Should().Be("alice@example.com");
     }
 
     private static User MakePendingUser()
@@ -139,28 +161,14 @@ public sealed class RegisterPendingUserCommandTests
         public bool Verify(string password, string passwordHash) => passwordHash == $"hashed-{password}";
     }
 
-    private sealed class FakeEmailService : IEmailService
-    {
-        public string? VerificationEmail { get; private set; }
-        public string? VerificationCode { get; private set; }
-
-        public Task SendVerificationEmailAsync(string toEmail, string code, CancellationToken ct = default)
-        {
-            VerificationEmail = toEmail;
-            VerificationCode = code;
-            return Task.CompletedTask;
-        }
-
-        public Task SendOtpEmailAsync(string toEmail, string otp, CancellationToken ct = default) =>
-            Task.CompletedTask;
-
-        public Task SendPasswordResetEmailAsync(string toEmail, string token, CancellationToken ct = default) =>
-            Task.CompletedTask;
-    }
-
     private sealed class FakeDispatcher : IDomainEventDispatcher
     {
-        public Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken ct = default) =>
-            Task.CompletedTask;
+        public IReadOnlyList<IDomainEvent> DispatchedEvents { get; private set; } = [];
+
+        public Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken ct = default)
+        {
+            DispatchedEvents = events;
+            return Task.CompletedTask;
+        }
     }
 }

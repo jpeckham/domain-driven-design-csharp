@@ -3,6 +3,7 @@ using SocialDDD.Application.Interfaces;
 using SocialDDD.Application.Users.DTOs;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Users.Events;
 
 namespace SocialDDD.Application.Users.Commands;
 
@@ -10,7 +11,6 @@ public sealed class RegisterPendingUserCommand(
     IUserRepository userRepository,
     IVerificationCodeRepository codeRepository,
     IPasswordHasher passwordHasher,
-    IEmailService emailService,
     IDomainEventDispatcher eventDispatcher)
 {
     public async Task ExecuteAsync(RegisterPendingRequest request, CancellationToken ct = default)
@@ -23,7 +23,10 @@ public sealed class RegisterPendingUserCommand(
             if (existingUser.Status != UserStatus.Pending)
                 throw new DomainException("Email is already registered.");
 
-            await SendVerificationCodeAsync(existingUser, email, ct);
+            var code = await SaveVerificationCodeAsync(existingUser, ct);
+            await eventDispatcher.DispatchAsync(
+                [new UserVerificationRequested(existingUser.Id, email, code.Code)],
+                ct);
             return;
         }
 
@@ -42,18 +45,16 @@ public sealed class RegisterPendingUserCommand(
 
         await userRepository.AddAsync(user, ct);
         await eventDispatcher.DispatchAsync(user.PopDomainEvents(), ct);
-
-        await SendVerificationCodeAsync(user, email, ct);
     }
 
-    private async Task SendVerificationCodeAsync(User user, Email email, CancellationToken ct)
+    private async Task<VerificationCode> SaveVerificationCodeAsync(User user, CancellationToken ct)
     {
         var code = new VerificationCode(
             GenerateCode(),
             DateTimeOffset.UtcNow.AddMinutes(15));
 
         await codeRepository.SaveAsync(user.Id, code, ct);
-        await emailService.SendVerificationEmailAsync(email.Value, code.Code, ct);
+        return code;
     }
 
     private static string GenerateCode()

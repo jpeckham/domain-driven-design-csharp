@@ -9,11 +9,18 @@ internal sealed class MongoDbOtpRepository(MongoDbContext context) : IOtpReposit
 {
     public Task SaveAsync(UserId userId, DeviceId deviceId, OneTimePasscode otp, CancellationToken ct = default)
     {
-        var doc = new OtpDocument(userId.Value.ToString(), deviceId.Value, otp.Code, otp.ExpiresAt.UtcDateTime);
-        return context.DeviceOtps.ReplaceOneAsync(
-            d => d.UserId == doc.UserId && d.DeviceId == doc.DeviceId,
-            doc,
-            new ReplaceOptions { IsUpsert = true },
+        var userKey = userId.Value.ToString();
+        var deviceKey = deviceId.Value;
+        var update = Builders<OtpDocument>.Update
+            .Set(d => d.UserId, userKey)
+            .Set(d => d.DeviceId, deviceKey)
+            .Set(d => d.Code, otp.Code)
+            .Set(d => d.ExpiresAt, otp.ExpiresAt.UtcDateTime);
+
+        return context.DeviceOtps.UpdateOneAsync(
+            d => d.UserId == userKey && d.DeviceId == deviceKey,
+            update,
+            new UpdateOptions { IsUpsert = true },
             ct);
     }
 

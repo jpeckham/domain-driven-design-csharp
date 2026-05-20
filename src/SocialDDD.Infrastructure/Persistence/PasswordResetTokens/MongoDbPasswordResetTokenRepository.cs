@@ -9,11 +9,16 @@ internal sealed class MongoDbPasswordResetTokenRepository(MongoDbContext context
 {
     public Task SaveAsync(UserId userId, PasswordResetToken token, CancellationToken ct = default)
     {
-        var doc = new PasswordResetTokenDocument(userId.Value.ToString(), token.Token, token.ExpiresAt.UtcDateTime);
-        return context.PasswordResetTokens.ReplaceOneAsync(
-            d => d.UserId == doc.UserId,
-            doc,
-            new ReplaceOptions { IsUpsert = true },
+        var userKey = userId.Value.ToString();
+        var update = Builders<PasswordResetTokenDocument>.Update
+            .Set(d => d.UserId, userKey)
+            .Set(d => d.Token, token.Token)
+            .Set(d => d.ExpiresAt, token.ExpiresAt.UtcDateTime);
+
+        return context.PasswordResetTokens.UpdateOneAsync(
+            d => d.UserId == userKey,
+            update,
+            new UpdateOptions { IsUpsert = true },
             ct);
     }
 

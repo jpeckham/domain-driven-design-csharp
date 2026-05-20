@@ -1,13 +1,14 @@
 using System.Security.Cryptography;
 using SocialDDD.Application.Interfaces;
 using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Users.Events;
 
 namespace SocialDDD.Application.Users.Commands;
 
 public sealed class RequestPasswordResetCommand(
     IUserRepository userRepository,
     IPasswordResetTokenRepository tokenRepository,
-    IEmailService emailService)
+    IDomainEventDispatcher eventDispatcher)
 {
     public async Task ExecuteAsync(string email, CancellationToken ct = default)
     {
@@ -32,7 +33,9 @@ public sealed class RequestPasswordResetCommand(
         var resetToken = new PasswordResetToken(tokenString, DateTimeOffset.UtcNow.AddMinutes(5));
 
         await tokenRepository.SaveAsync(user.Id, resetToken, ct);
-        await emailService.SendPasswordResetEmailAsync(emailVO.Value, tokenString, ct);
+        await eventDispatcher.DispatchAsync(
+            [new PasswordResetRequested(user.Id, emailVO, tokenString)],
+            ct);
     }
 
     private static string Base64UrlEncode(byte[] bytes)

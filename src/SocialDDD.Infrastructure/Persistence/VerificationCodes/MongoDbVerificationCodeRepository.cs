@@ -9,11 +9,16 @@ internal sealed class MongoDbVerificationCodeRepository(MongoDbContext context) 
 {
     public Task SaveAsync(UserId userId, VerificationCode code, CancellationToken ct = default)
     {
-        var doc = new VerificationCodeDocument(userId.Value.ToString(), code.Code, code.ExpiresAt.UtcDateTime);
-        return context.VerificationCodes.ReplaceOneAsync(
-            d => d.UserId == doc.UserId,
-            doc,
-            new ReplaceOptions { IsUpsert = true },
+        var userKey = userId.Value.ToString();
+        var update = Builders<VerificationCodeDocument>.Update
+            .Set(d => d.UserId, userKey)
+            .Set(d => d.Code, code.Code)
+            .Set(d => d.ExpiresAt, code.ExpiresAt.UtcDateTime);
+
+        return context.VerificationCodes.UpdateOneAsync(
+            d => d.UserId == userKey,
+            update,
+            new UpdateOptions { IsUpsert = true },
             ct);
     }
 

@@ -5,6 +5,7 @@ using SocialDDD.Application.Users.DTOs;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Primitives;
 using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Users.Events;
 
 namespace SocialDDD.Domain.Tests;
 
@@ -131,16 +132,16 @@ public class LoginWithDeviceHandlerTests
         var hasher = new FakePasswordHasher(valid: true);
         var deviceRepo = new FakeRememberedDeviceRepo(isRemembered: true);
         var otpRepo = new FakeOtpRepo();
-        var emailSvc = new FakeEmailService();
+        var dispatcher = new FakeDispatcher();
         var tokenSvc = new FakeTokenService();
 
-        var handler = new LoginWithDeviceCommand(userRepo, hasher, deviceRepo, otpRepo, emailSvc, tokenSvc);
+        var handler = new LoginWithDeviceCommand(userRepo, hasher, deviceRepo, otpRepo, dispatcher, tokenSvc);
         var result = await handler.ExecuteAsync(new LoginWithDeviceRequest("alice@example.com", "password", deviceId.Value));
 
         result.Should().BeOfType<LoginWithDeviceResult.Success>();
         var success = (LoginWithDeviceResult.Success)result;
         success.Token.Should().Be("fake-token");
-        emailSvc.OtpSentCount.Should().Be(0);
+        dispatcher.DispatchedEvents.Should().BeEmpty();
     }
 
     [Fact]
@@ -153,15 +154,17 @@ public class LoginWithDeviceHandlerTests
         var hasher = new FakePasswordHasher(valid: true);
         var deviceRepo = new FakeRememberedDeviceRepo(isRemembered: false);
         var otpRepo = new FakeOtpRepo();
-        var emailSvc = new FakeEmailService();
+        var dispatcher = new FakeDispatcher();
         var tokenSvc = new FakeTokenService();
 
-        var handler = new LoginWithDeviceCommand(userRepo, hasher, deviceRepo, otpRepo, emailSvc, tokenSvc);
+        var handler = new LoginWithDeviceCommand(userRepo, hasher, deviceRepo, otpRepo, dispatcher, tokenSvc);
         var result = await handler.ExecuteAsync(new LoginWithDeviceRequest("alice@example.com", "password", deviceId.Value));
 
         result.Should().BeOfType<LoginWithDeviceResult.OtpRequired>();
-        emailSvc.OtpSentCount.Should().Be(1);
         otpRepo.SavedOtp.Should().NotBeNull();
+        dispatcher.DispatchedEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<LoginChallenged>()
+            .Which.Otp.Should().Be(otpRepo.SavedOtp!.Code);
     }
 
     [Fact]
@@ -174,10 +177,10 @@ public class LoginWithDeviceHandlerTests
         var hasher = new FakePasswordHasher(valid: false);
         var deviceRepo = new FakeRememberedDeviceRepo(isRemembered: false);
         var otpRepo = new FakeOtpRepo();
-        var emailSvc = new FakeEmailService();
+        var dispatcher = new FakeDispatcher();
         var tokenSvc = new FakeTokenService();
 
-        var handler = new LoginWithDeviceCommand(userRepo, hasher, deviceRepo, otpRepo, emailSvc, tokenSvc);
+        var handler = new LoginWithDeviceCommand(userRepo, hasher, deviceRepo, otpRepo, dispatcher, tokenSvc);
         var act = () => handler.ExecuteAsync(new LoginWithDeviceRequest("alice@example.com", "wrong", deviceId.Value));
 
         await act.Should().ThrowAsync<DomainValidationException>();
@@ -191,10 +194,10 @@ public class LoginWithDeviceHandlerTests
         var hasher = new FakePasswordHasher(valid: true);
         var deviceRepo = new FakeRememberedDeviceRepo(isRemembered: false);
         var otpRepo = new FakeOtpRepo();
-        var emailSvc = new FakeEmailService();
+        var dispatcher = new FakeDispatcher();
         var tokenSvc = new FakeTokenService();
 
-        var handler = new LoginWithDeviceCommand(userRepo, hasher, deviceRepo, otpRepo, emailSvc, tokenSvc);
+        var handler = new LoginWithDeviceCommand(userRepo, hasher, deviceRepo, otpRepo, dispatcher, tokenSvc);
         var act = () => handler.ExecuteAsync(new LoginWithDeviceRequest("nobody@example.com", "password", deviceId.Value));
 
         await act.Should().ThrowAsync<DomainValidationException>();
@@ -384,21 +387,15 @@ file sealed class FakeOtpRepo : IOtpRepository
     }
 }
 
-file sealed class FakeEmailService : IEmailService
+file sealed class FakeDispatcher : IDomainEventDispatcher
 {
-    public int OtpSentCount { get; private set; }
+    public IReadOnlyList<IDomainEvent> DispatchedEvents { get; private set; } = [];
 
-    public Task SendVerificationEmailAsync(string toEmail, string code, CancellationToken ct = default)
-        => Task.CompletedTask;
-
-    public Task SendOtpEmailAsync(string toEmail, string otp, CancellationToken ct = default)
+    public Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken ct = default)
     {
-        OtpSentCount++;
+        DispatchedEvents = events;
         return Task.CompletedTask;
     }
-
-    public Task SendPasswordResetEmailAsync(string toEmail, string token, CancellationToken ct = default)
-        => Task.CompletedTask;
 }
 
 file sealed class FakeTokenService : ITokenService
