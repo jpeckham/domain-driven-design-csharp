@@ -9,6 +9,7 @@ using SocialDDD.Application.Follows;
 using SocialDDD.Application.Users;
 using SocialDDD.Application.Users.Commands;
 using SocialDDD.Application.Users.Queries;
+using SocialDDD.Domain.Follows;
 using SocialDDD.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<FollowDomainService>();
 builder.Services.AddScoped<FollowService>();
 builder.Services.AddScoped<BeginProfileImageUploadCommandHandler>();
 builder.Services.AddScoped<CompleteProfileImageUploadCommandHandler>();

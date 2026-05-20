@@ -26,7 +26,7 @@ public class FollowTests
     public async Task FollowAsync_NewRelationship_SavesFollow()
     {
         var repository = new FakeFollowRepository();
-        var service = new FollowService(repository, new FakeBlockRepository(), new NoOpDomainEventDispatcher());
+        var service = new FollowService(repository, new FollowDomainService(new FakeBlockRepository()), new NoOpDomainEventDispatcher());
 
         await service.FollowAsync(new Handle("alice"), new Handle("bob"));
 
@@ -40,7 +40,7 @@ public class FollowTests
     {
         var repository = new FakeFollowRepository();
         await repository.SaveAsync(Follow.Create(new Handle("alice"), new Handle("bob")));
-        var service = new FollowService(repository, new FakeBlockRepository(), new NoOpDomainEventDispatcher());
+        var service = new FollowService(repository, new FollowDomainService(new FakeBlockRepository()), new NoOpDomainEventDispatcher());
 
         await service.UnfollowAsync(new Handle("alice"), new Handle("bob"));
 
@@ -52,13 +52,25 @@ public class FollowTests
     {
         var repository = new FakeFollowRepository();
         var blocks = new FakeBlockRepository([Block.Create(new Handle("alice"), new Handle("bob"))]);
-        var service = new FollowService(repository, blocks, new NoOpDomainEventDispatcher());
+        var service = new FollowService(repository, new FollowDomainService(blocks), new NoOpDomainEventDispatcher());
 
         var act = async () => await service.FollowAsync(new Handle("bob"), new Handle("alice"));
 
         await act.Should().ThrowAsync<DomainException>()
             .WithMessage("Cannot follow a user when either user has blocked the other.");
         (await repository.IsFollowingAsync(new Handle("bob"), new Handle("alice"))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task EnsureCanFollowAsync_WhenEitherUserBlocked_ThrowsDomainException()
+    {
+        var blocks = new FakeBlockRepository([Block.Create(new Handle("alice"), new Handle("bob"))]);
+        var domainService = new FollowDomainService(blocks);
+
+        var act = async () => await domainService.EnsureCanFollowAsync(new Handle("bob"), new Handle("alice"));
+
+        await act.Should().ThrowAsync<DomainException>()
+            .WithMessage("Cannot follow a user when either user has blocked the other.");
     }
 
     private sealed class FakeFollowRepository : IFollowRepository
