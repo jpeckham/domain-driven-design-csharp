@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SocialDDD.Application.Posts.Commands;
-using SocialDDD.Application.Posts.Queries;
+using SocialDDD.Application.Social.Posts.Commands;
+using SocialDDD.Application.Social.Posts.Queries;
 using SocialDDD.Domain.Exceptions;
-using SocialDDD.Domain.Posts;
+using SocialDDD.Domain.Social.Posts;
 
 namespace SocialDDD.Api.Controllers;
 

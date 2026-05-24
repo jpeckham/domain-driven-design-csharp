@@ -1,8 +1,8 @@
 using FluentAssertions;
-using SocialDDD.Application.Posts;
-using SocialDDD.Application.Posts.Commands;
-using SocialDDD.Domain.Posts;
-using SocialDDD.Infrastructure.PostMediaStorage;
+using SocialDDD.Application.Social.Posts;
+using SocialDDD.Application.Social.Posts.Commands;
+using SocialDDD.Domain.Social.Posts;
+using SocialDDD.Infrastructure.Social.PostMediaStorage;
 
 namespace SocialDDD.Domain.Tests;
 

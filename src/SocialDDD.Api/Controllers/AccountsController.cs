@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SocialDDD.Application.Users;
-using SocialDDD.Application.Users.DTOs;
+using SocialDDD.Application.Identity.Accounts;
+using SocialDDD.Application.Identity.Accounts.DTOs;
 using SocialDDD.Domain.Exceptions;
 
 namespace SocialDDD.Api.Controllers;

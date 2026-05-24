@@ -1,14 +1,15 @@
+using SocialDDD.Domain.Social.Profiles;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using SocialDDD.Domain.Blocks;
-using SocialDDD.Domain.Follows;
-using SocialDDD.Domain.Posts;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Social.Blocks;
+using SocialDDD.Domain.Social.Follows;
+using SocialDDD.Domain.Social.Posts;
+using SocialDDD.Domain.Identity.Users;
 using SocialDDD.Infrastructure.Persistence.Mapping;
-using SocialDDD.Infrastructure.Persistence.OtpCodes;
-using SocialDDD.Infrastructure.Persistence.PasswordResetTokens;
-using SocialDDD.Infrastructure.Persistence.RememberedDevices;
-using SocialDDD.Infrastructure.Persistence.VerificationCodes;
+using SocialDDD.Infrastructure.Identity.Persistence.OtpCodes;
+using SocialDDD.Infrastructure.Identity.Persistence.PasswordResetTokens;
+using SocialDDD.Infrastructure.Identity.Persistence.RememberedDevices;
+using SocialDDD.Infrastructure.Identity.Persistence.VerificationCodes;
 
 namespace SocialDDD.Infrastructure.Persistence;
 

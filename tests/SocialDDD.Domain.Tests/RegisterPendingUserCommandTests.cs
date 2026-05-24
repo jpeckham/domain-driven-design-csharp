@@ -1,10 +1,10 @@
 using FluentAssertions;
 using SocialDDD.Application.Interfaces;
-using SocialDDD.Application.Users.Commands;
-using SocialDDD.Application.Users.DTOs;
+using SocialDDD.Application.Identity.Accounts.Commands;
+using SocialDDD.Application.Identity.Accounts.DTOs;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Primitives;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Identity.Users;
 
 namespace SocialDDD.Domain.Tests;
 
@@ -30,7 +30,7 @@ public sealed class RegisterPendingUserCommandTests
         codeRepo.SavedCode.Should().NotBeNull();
         codeRepo.SavedCode!.Code.Should().HaveLength(6);
         dispatcher.DispatchedEvents.Should().ContainSingle()
-            .Which.Should().BeOfType<SocialDDD.Domain.Users.Events.UserVerificationRequested>()
+            .Which.Should().BeOfType<SocialDDD.Domain.Identity.Users.Events.UserVerificationRequested>()
             .Which.Code.Should().Be(codeRepo.SavedCode.Code);
     }
 
@@ -76,7 +76,7 @@ public sealed class RegisterPendingUserCommandTests
 
         codeRepo.SavedCode.Should().BeNull();
         dispatcher.DispatchedEvents.Should().ContainSingle()
-            .Which.Should().BeOfType<SocialDDD.Domain.Users.Events.UserRegistered>()
+            .Which.Should().BeOfType<SocialDDD.Domain.Identity.Users.Events.UserRegistered>()
             .Which.Email.Value.Should().Be("alice@example.com");
     }
 

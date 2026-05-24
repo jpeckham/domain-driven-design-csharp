@@ -1,10 +1,12 @@
+using SocialDDD.Infrastructure.Persistence;
+using SocialDDD.Domain.Social.Profiles;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
-using SocialDDD.Domain.Blocks;
-using SocialDDD.Domain.Follows;
-using SocialDDD.Domain.Posts;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Social.Blocks;
+using SocialDDD.Domain.Social.Follows;
+using SocialDDD.Domain.Social.Posts;
+using SocialDDD.Domain.Identity.Users;
 
 namespace SocialDDD.Infrastructure.Persistence.Mapping;
 

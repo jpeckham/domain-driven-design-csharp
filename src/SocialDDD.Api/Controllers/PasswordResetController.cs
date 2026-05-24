@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using SocialDDD.Application.Users.Commands;
+using SocialDDD.Application.Identity.Accounts.Commands;
 using SocialDDD.Domain.Exceptions;
 
 namespace SocialDDD.Api.Controllers;

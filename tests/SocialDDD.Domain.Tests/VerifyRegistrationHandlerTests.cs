@@ -1,10 +1,10 @@
 using FluentAssertions;
 using SocialDDD.Application.Interfaces;
-using SocialDDD.Application.Users.Commands;
-using SocialDDD.Application.Users.DTOs;
+using SocialDDD.Application.Identity.Accounts.Commands;
+using SocialDDD.Application.Identity.Accounts.DTOs;
 using SocialDDD.Domain.Exceptions;
 using SocialDDD.Domain.Primitives;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Identity.Users;
 
 namespace SocialDDD.Domain.Tests;
 

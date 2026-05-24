@@ -1,7 +1,7 @@
 using FluentAssertions;
 using SocialDDD.Domain.Exceptions;
-using SocialDDD.Domain.Users;
-using SocialDDD.Domain.Users.Events;
+using SocialDDD.Domain.Identity.Users;
+using SocialDDD.Domain.Identity.Users.Events;
 
 namespace SocialDDD.Domain.Tests;
 

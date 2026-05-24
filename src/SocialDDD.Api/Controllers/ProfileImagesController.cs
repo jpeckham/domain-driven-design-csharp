@@ -1,10 +1,13 @@
+using SocialDDD.Domain.Social.Profiles;
+using SocialDDD.Application.Social.Profiles.DTOs;
+using SocialDDD.Application.Social.Profiles.Commands;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SocialDDD.Application.Users.Commands;
-using SocialDDD.Application.Users.Queries;
+using SocialDDD.Application.Identity.Accounts.Commands;
+using SocialDDD.Application.Social.Profiles.Queries;
 using SocialDDD.Domain.Exceptions;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Identity.Users;
 
 namespace SocialDDD.Api.Controllers;
 

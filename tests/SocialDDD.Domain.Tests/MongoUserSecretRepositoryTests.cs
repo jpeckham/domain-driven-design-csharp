@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Identity.Users;
 using SocialDDD.Infrastructure;
 using Testcontainers.MongoDb;
 

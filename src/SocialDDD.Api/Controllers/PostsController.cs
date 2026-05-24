@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SocialDDD.Application.Posts;
-using SocialDDD.Application.Posts.Commands;
-using SocialDDD.Application.Posts.DTOs;
-using SocialDDD.Application.Posts.Queries;
+using SocialDDD.Application.Social.Posts;
+using SocialDDD.Application.Social.Posts.Commands;
+using SocialDDD.Application.Social.Posts.DTOs;
+using SocialDDD.Application.Social.Posts.Queries;
 using SocialDDD.Domain.Exceptions;
 
 namespace SocialDDD.Api.Controllers;
@@ -170,7 +170,7 @@ public sealed class PostsController(
         {
             var query = new SearchPostsQuery(
                 q,
-                requesterHandle is not null ? new SocialDDD.Domain.Users.Handle(requesterHandle) : null,
+                requesterHandle is not null ? new SocialDDD.Domain.Social.Profiles.Handle(requesterHandle) : null,
                 limit,
                 offset);
             var results = await searchPostsHandler.HandleAsync(query, ct);

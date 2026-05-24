@@ -3,8 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SocialDDD.Application.Interfaces;
 using SocialDDD.Domain.Primitives;
-using SocialDDD.Domain.Users;
-using SocialDDD.Domain.Users.Events;
+using SocialDDD.Domain.Identity.Users;
+using SocialDDD.Domain.Identity.Users.Events;
 using SocialDDD.Infrastructure;
 
 namespace SocialDDD.Domain.Tests;

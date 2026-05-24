@@ -1,10 +1,10 @@
 using FluentAssertions;
 using SocialDDD.Application.Interfaces;
-using SocialDDD.Application.Users.Commands;
-using SocialDDD.Application.Users.Queries;
+using SocialDDD.Application.Identity.Accounts.Commands;
+using SocialDDD.Application.Social.Profiles.Queries;
 using SocialDDD.Domain.Primitives;
-using SocialDDD.Domain.Users;
-using SocialDDD.Infrastructure.ProfileImages;
+using SocialDDD.Domain.Identity.Users;
+using SocialDDD.Infrastructure.Social.ProfileImages;
 
 namespace SocialDDD.Domain.Tests;
 

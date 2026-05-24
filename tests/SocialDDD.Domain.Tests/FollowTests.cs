@@ -1,11 +1,11 @@
 using FluentAssertions;
-using SocialDDD.Application.Follows;
+using SocialDDD.Application.Social.Follows;
 using SocialDDD.Application.Interfaces;
-using SocialDDD.Domain.Blocks;
+using SocialDDD.Domain.Social.Blocks;
 using SocialDDD.Domain.Exceptions;
-using SocialDDD.Domain.Follows;
+using SocialDDD.Domain.Social.Follows;
 using SocialDDD.Domain.Primitives;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Identity.Users;
 
 namespace SocialDDD.Domain.Tests;
 

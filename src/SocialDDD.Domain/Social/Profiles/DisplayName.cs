@@ -1,0 +1,18 @@
+using SocialDDD.Domain.Exceptions;
+
+namespace SocialDDD.Domain.Social.Profiles;
+
+public sealed record DisplayName
+{
+    public string Value { get; }
+
+    public DisplayName(string value)
+    {
+        if (value is null)
+            throw new DomainValidationException("DisplayName cannot be null.");
+        var trimmed = value.Trim();
+        if (trimmed.Length == 0 || trimmed.Length > 50)
+            throw new DomainValidationException("DisplayName must be 1-50 characters.");
+        Value = trimmed;
+    }
+}

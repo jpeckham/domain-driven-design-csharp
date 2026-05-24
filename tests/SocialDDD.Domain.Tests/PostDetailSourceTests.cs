@@ -7,7 +7,7 @@ public class PostDetailSourceTests
     [Fact]
     public void ConversationDtos_ExposeFocusedParentPost()
     {
-        var applicationDto = ReadRepositoryFile("src", "SocialDDD.Application", "Posts", "DTOs", "PostConversationDto.cs");
+        var applicationDto = ReadRepositoryFile("src", "SocialDDD.Application", "Social", "Posts", "DTOs", "PostConversationDto.cs");
         var clientService = ReadRepositoryFile("src", "SocialDDD.Client", "Services", "PostApiService.cs");
 
         applicationDto.Should().Contain("PostDto? ParentPost");
@@ -20,6 +20,7 @@ public class PostDetailSourceTests
         var source = ReadRepositoryFile(
             "src",
             "SocialDDD.Application",
+            "Social",
             "Posts",
             "Queries",
             "GetPostWithConversationQuery.cs");

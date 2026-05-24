@@ -19,6 +19,7 @@ services:
       ASPNETCORE_HTTP_PORTS: "8080"
       Mongo__ConnectionString: mongodb://mongo:27017
       Mongo__DatabaseName: socialddd
+      Client__BaseUrl: http://localhost:5200
       Features__OtpRepository: MongoDb
       Features__RememberedDeviceRepository: MongoDb
       PostMedia__Directory: /app/data/post-media

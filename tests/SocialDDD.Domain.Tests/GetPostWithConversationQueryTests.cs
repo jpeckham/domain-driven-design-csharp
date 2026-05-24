@@ -1,7 +1,7 @@
 using FluentAssertions;
-using SocialDDD.Application.Posts.Queries;
-using SocialDDD.Domain.Posts;
-using SocialDDD.Domain.Users;
+using SocialDDD.Application.Social.Posts.Queries;
+using SocialDDD.Domain.Social.Posts;
+using SocialDDD.Domain.Identity.Users;
 
 namespace SocialDDD.Domain.Tests;
 

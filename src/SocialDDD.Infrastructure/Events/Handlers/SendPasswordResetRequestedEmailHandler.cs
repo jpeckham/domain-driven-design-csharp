@@ -1,5 +1,5 @@
 using SocialDDD.Application.Interfaces;
-using SocialDDD.Domain.Users.Events;
+using SocialDDD.Domain.Identity.Users.Events;
 
 namespace SocialDDD.Infrastructure.Events.Handlers;
 

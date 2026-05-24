@@ -1,12 +1,12 @@
 using FluentAssertions;
 using SocialDDD.Application.Interfaces;
-using SocialDDD.Application.Posts;
-using SocialDDD.Application.Posts.DTOs;
-using SocialDDD.Domain.Blocks;
-using SocialDDD.Domain.Follows;
-using SocialDDD.Domain.Posts;
+using SocialDDD.Application.Social.Posts;
+using SocialDDD.Application.Social.Posts.DTOs;
+using SocialDDD.Domain.Social.Blocks;
+using SocialDDD.Domain.Social.Follows;
+using SocialDDD.Domain.Social.Posts;
 using SocialDDD.Domain.Primitives;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Identity.Users;
 
 namespace SocialDDD.Domain.Tests;
 

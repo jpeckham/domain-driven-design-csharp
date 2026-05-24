@@ -1,4 +1,4 @@
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Identity.Users;
 
 namespace SocialDDD.Application.Interfaces;
 

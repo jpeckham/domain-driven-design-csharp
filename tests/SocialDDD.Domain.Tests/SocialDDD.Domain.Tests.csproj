@@ -19,6 +19,11 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="SocialDDD.Domain.Social.Profiles" />
+    <Using Include="SocialDDD.Domain.Social.Profiles.Events" />
+    <Using Include="SocialDDD.Application.Social.Profiles.Commands" />
+    <Using Include="SocialDDD.Application.Social.Profiles.DTOs" />
+    <Using Include="SocialDDD.Application.Social.Profiles.Queries" />
   </ItemGroup>
 
   <ItemGroup>

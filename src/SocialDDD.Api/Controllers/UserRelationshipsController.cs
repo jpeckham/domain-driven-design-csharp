@@ -1,10 +1,11 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SocialDDD.Application.Follows;
-using SocialDDD.Domain.Blocks;
+using SocialDDD.Application.Social.Follows;
+using SocialDDD.Domain.Social.Blocks;
 using SocialDDD.Domain.Exceptions;
-using SocialDDD.Domain.Users;
+using SocialDDD.Domain.Identity.Users;
+using SocialDDD.Domain.Social.Profiles;
 
 namespace SocialDDD.Api.Controllers;
 
@@ -61,7 +62,7 @@ public sealed class UserRelationshipsController(
             var target = await GetTargetAsync(handle, ct);
             var existing = await blockRepository.FindAsync(requester.Handle, target.Handle, ct);
             if (existing is null)
-                await blockRepository.SaveAsync(SocialDDD.Domain.Blocks.Block.Create(requester.Handle, target.Handle), ct);
+                await blockRepository.SaveAsync(SocialDDD.Domain.Social.Blocks.Block.Create(requester.Handle, target.Handle), ct);
             await followService.UnfollowAsync(requester.Handle, target.Handle, ct);
             await followService.UnfollowAsync(target.Handle, requester.Handle, ct);
             return NoContent();
