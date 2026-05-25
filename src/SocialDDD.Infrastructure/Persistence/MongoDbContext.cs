@@ -122,12 +122,10 @@ public sealed class MongoDbContext
 
         Posts.Indexes.CreateOne(postRepostIndex);
 
-        var postSearchIndex = new CreateIndexModel<Post>(
-            Builders<Post>.IndexKeys
-                .Text(p => p.Content)
-                .Text("hashtags"),
-            new CreateIndexOptions { Background = true, Name = "post_text_search" });
+        var postHashtagsIndex = new CreateIndexModel<Post>(
+            Builders<Post>.IndexKeys.Ascending("hashtags"),
+            new CreateIndexOptions { Background = true, Name = "hashtags_asc" });
 
-        Posts.Indexes.CreateOne(postSearchIndex);
+        Posts.Indexes.CreateOne(postHashtagsIndex);
     }
 }

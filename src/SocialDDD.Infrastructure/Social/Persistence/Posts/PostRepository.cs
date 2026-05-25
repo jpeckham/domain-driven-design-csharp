@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using SocialDDD.Domain.Social.Posts;
 using SocialDDD.Domain.Identity.Users;
+using System.Text.RegularExpressions;
 
 namespace SocialDDD.Infrastructure.Social.Persistence.Posts;
 
@@ -244,9 +245,12 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
         int offset,
         CancellationToken ct = default)
     {
+        var escapedQuery = Regex.Escape(query);
         var filters = new List<FilterDefinition<Post>>
         {
-            Builders<Post>.Filter.Text(query),
+            Builders<Post>.Filter.Or(
+                Builders<Post>.Filter.Regex("content", new BsonRegularExpression(escapedQuery, "i")),
+                Builders<Post>.Filter.Regex("hashtags", new BsonRegularExpression($"^{escapedQuery}$", "i"))),
             Builders<Post>.Filter.Eq(p => p.IsDeleted, false)
         };
 
@@ -266,7 +270,7 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
 
         var results = await context.Posts
             .Find(filter)
-            .Sort(Builders<Post>.Sort.MetaTextScore("textScore").Descending(p => p.PostedAt))
+            .SortByDescending(p => p.PostedAt)
             .Skip(offset)
             .Limit(limit)
             .ToListAsync(ct);
