@@ -1,0 +1,35 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore SocialDDD.sln
+
+      - name: Build
+        run: dotnet build SocialDDD.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test SocialDDD.sln --configuration Release --no-build
+
+      - name: Docker Compose config
+        run: docker compose config

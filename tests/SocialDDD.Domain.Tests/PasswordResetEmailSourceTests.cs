@@ -23,6 +23,15 @@ public sealed class PasswordResetEmailSourceTests
         source.Should().Contain("Client__BaseUrl: http://localhost:5200");
     }
 
+    [Fact]
+    public void ApiCors_UsesConfiguredClientBaseUrl()
+    {
+        var source = ReadRepositoryFile("src", "SocialDDD.Api", "Program.cs");
+
+        source.Should().Contain("builder.Configuration[\"Client:BaseUrl\"]");
+        source.Should().Contain("configuredClientBaseUrl");
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

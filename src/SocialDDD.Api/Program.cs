@@ -58,9 +58,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 
+var configuredClientBaseUrl = builder.Configuration["Client:BaseUrl"];
+var allowedOrigins = new List<string> { "https://localhost:7200", "http://localhost:5200" };
+if (!string.IsNullOrWhiteSpace(configuredClientBaseUrl))
+{
+    allowedOrigins.Add(configuredClientBaseUrl);
+}
+
 builder.Services.AddCors(opts =>
     opts.AddDefaultPolicy(p =>
-        p.WithOrigins("https://localhost:7200", "http://localhost:5200")
+        p.WithOrigins([.. allowedOrigins])
          .AllowAnyHeader()
          .AllowAnyMethod()));
 
