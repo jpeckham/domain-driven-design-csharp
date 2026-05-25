@@ -44,7 +44,7 @@ public sealed class MongoDbContext
     {
         var handleIndex = new CreateIndexModel<User>(
             Builders<User>.IndexKeys.Ascending("handle"),
-            new CreateIndexOptions { Unique = true, Background = true, Name = "handle_unique" });
+            new CreateIndexOptions { Background = true, Name = "handle_asc" });
 
         Users.Indexes.CreateOne(handleIndex);
 
@@ -52,7 +52,7 @@ public sealed class MongoDbContext
             Builders<Block>.IndexKeys
                 .Ascending("blockerHandle")
                 .Ascending("blockedHandle"),
-            new CreateIndexOptions { Unique = true, Background = true, Name = "blockerHandle_blockedHandle_unique" });
+            new CreateIndexOptions { Background = true, Name = "blockerHandle_blockedHandle_asc" });
 
         Blocks.Indexes.CreateOne(blockPairIndex);
 
@@ -66,7 +66,7 @@ public sealed class MongoDbContext
             Builders<Follow>.IndexKeys
                 .Ascending("followerHandle")
                 .Ascending("followedHandle"),
-            new CreateIndexOptions { Unique = true, Background = true, Name = "followerHandle_followedHandle_unique" });
+            new CreateIndexOptions { Background = true, Name = "followerHandle_followedHandle_asc" });
 
         Follows.Indexes.CreateOne(followPairIndex);
 
@@ -86,7 +86,7 @@ public sealed class MongoDbContext
             Builders<RememberedDeviceDocument>.IndexKeys
                 .Ascending(d => d.UserId)
                 .Ascending(d => d.DeviceId),
-            new CreateIndexOptions { Unique = true, Background = true, Name = "userId_deviceId_unique" });
+            new CreateIndexOptions { Background = true, Name = "userId_deviceId_asc" });
 
         RememberedDevices.Indexes.CreateOne(rememberedDeviceIndex);
 
