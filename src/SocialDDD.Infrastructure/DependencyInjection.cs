@@ -35,6 +35,7 @@ public static class DependencyInjection
     {
         services.Configure<MongoSettings>(configuration.GetSection("Mongo"));
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
+        services.Configure<AcsEmailOptions>(configuration.GetSection(AcsEmailOptions.SectionName));
 
         services.AddSingleton<MongoDbContext>();
 

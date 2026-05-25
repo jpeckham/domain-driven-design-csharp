@@ -291,6 +291,16 @@ resource jwtSecretValue 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+resource acsEmailConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = {
+  parent: keyVault
+  name: 'cleansocial-${environmentName}-acs-email-connection-string'
+}
+
+resource acsEmailSenderAddressSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = {
+  parent: keyVault
+  name: 'cleansocial-${environmentName}-acs-email-sender-address'
+}
+
 var keyVaultSecretsUserRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 var acrPullRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var acrPushRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
@@ -397,6 +407,16 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
           keyVaultUrl: jwtSecretValue.properties.secretUri
           identity: apiIdentity.id
         }
+        {
+          name: 'acs-email-connection-string'
+          keyVaultUrl: acsEmailConnectionStringSecret.properties.secretUri
+          identity: apiIdentity.id
+        }
+        {
+          name: 'acs-email-sender-address'
+          keyVaultUrl: acsEmailSenderAddressSecret.properties.secretUri
+          identity: apiIdentity.id
+        }
       ]
     }
     template: {
@@ -474,7 +494,15 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'Features__EmailService'
-              value: 'Console'
+              value: 'AzureCommunication'
+            }
+            {
+              name: 'AcsEmail__ConnectionString'
+              secretRef: 'acs-email-connection-string'
+            }
+            {
+              name: 'AcsEmail__SenderAddress'
+              secretRef: 'acs-email-sender-address'
             }
             {
               name: 'PostMedia__Directory'
