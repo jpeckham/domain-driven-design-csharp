@@ -79,15 +79,45 @@ internal sealed class PostRepository(MongoDbContext context) : IPostRepository
                 : Builders<Post>.Filter.Where(_ => false));
         }
 
-        var filter = Builders<Post>.Filter.And(filters);
-
-        var results = await context.Posts
-            .Find(filter)
-            .SortByDescending(p => p.PostedAt)
-            .Skip(skip)
-            .Limit(limit)
+        var feedFilter = Builders<Post>.Filter.And(filters);
+        var feedPosts = await context.Posts
+            .Find(feedFilter)
             .ToListAsync(ct);
-        return results;
+
+        if (!rootOnly)
+        {
+            return feedPosts
+                .OrderByDescending(p => p.PostedAt)
+                .Skip(skip)
+                .Take(limit)
+                .ToList();
+        }
+
+        var topLevelPosts = feedPosts
+            .Where(p => p.ParentPostId is null)
+            .ToList();
+        var topLevelPostIds = topLevelPosts.Select(p => p.Id).ToHashSet();
+
+        var descendantReplies = await context.Posts
+            .Find(p => !p.IsDeleted && p.ParentPostId != null)
+            .ToListAsync(ct);
+
+        var latestReplyByRoot = descendantReplies
+            .SelectMany(reply => reply.AncestorPostIds
+                .Where(topLevelPostIds.Contains)
+                .Select(rootId => new { rootId, reply.PostedAt }))
+            .GroupBy(item => item.rootId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Max(item => item.PostedAt));
+
+        return topLevelPosts
+            .OrderByDescending(post => latestReplyByRoot.TryGetValue(post.Id, out var latestReplyAt)
+                ? latestReplyAt > post.PostedAt ? latestReplyAt : post.PostedAt
+                : post.PostedAt)
+            .Skip(skip)
+            .Take(limit)
+            .ToList();
     }
 
     public Task UpdateAsync(Post post, CancellationToken ct = default) =>

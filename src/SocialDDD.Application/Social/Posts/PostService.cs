@@ -68,7 +68,7 @@ public sealed class PostService(
         }
         var safeLimit = limit <= 0 ? 20 : Math.Min(limit, 100);
         var safeSkip = Math.Max(skip, 0);
-        var posts = await postRepository.GetFeedAsync(safeSkip, safeLimit, rootOnly, excludedHandles, includedHandles, ct);
+        var posts = await postRepository.GetFeedAsync(safeSkip, safeLimit, rootOnly: true, excludedHandles, includedHandles, ct);
         return await ToDtosAsync(posts, handle, userId, ct);
     }
 

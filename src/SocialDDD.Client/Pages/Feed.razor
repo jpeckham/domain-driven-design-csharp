@@ -80,21 +80,6 @@
                         OnLike="ToggleLikeAsync"
                         OnReply="OpenReply"
                         OnRepost="OpenRepost" />
-                    @if (_replyingTo == post.PostId)
-                    {
-                        <form class="inline-composer" @onsubmit="SubmitReplyAsync">
-                            @if (!string.IsNullOrWhiteSpace(_replyTargetHandle))
-                            {
-                                <p class="reply-target">Replying to @_replyTargetHandle</p>
-                            }
-                            <textarea @bind="_replyContent" maxlength="@ReplyContentMaxLength"></textarea>
-                            <MediaAttachmentStrip @bind-AssetIds="_replyMediaAssetIds" />
-                            <div class="composer-submit-row">
-                                <span>@StoredReplyLength / 280</span>
-                                <button type="submit" disabled="@_busy">Reply</button>
-                            </div>
-                        </form>
-                    }
                     @if (_reposting == post.PostId)
                     {
                         <form class="inline-composer" @onsubmit="SubmitQuoteRepostAsync">
@@ -122,10 +107,6 @@
     private string _newContent = "";
     private List<Guid> _newMediaAssetIds = [];
     private int _newMediaResetKey;
-    private Guid? _replyingTo;
-    private string _replyContent = "";
-    private string? _replyTargetHandle;
-    private List<Guid> _replyMediaAssetIds = [];
     private Guid? _reposting;
     private string _repostCommentary = "";
     private bool _busy;
@@ -139,9 +120,6 @@
     private string _searchDraft = "";
     private string? _searchQuery;
     private string FeedTitle => string.IsNullOrWhiteSpace(_searchQuery) ? "Recent" : "Search";
-    private int ReplyPrefixLength => string.IsNullOrWhiteSpace(_replyTargetHandle) ? 0 : _replyTargetHandle.Length + 1;
-    private int ReplyContentMaxLength => Math.Max(1, 280 - ReplyPrefixLength);
-    private int StoredReplyLength => ReplyPrefixLength + _replyContent.Length;
     private bool IsPostDisabled =>
         _busy || (string.IsNullOrWhiteSpace(_newContent) && _newMediaAssetIds.Count == 0);
 
@@ -257,54 +235,7 @@
 
     private void OpenReply(Guid postId)
     {
-        var post = _posts.FirstOrDefault(p => p.PostId == postId);
-        _replyingTo = postId;
-        _replyTargetHandle = post?.AuthorHandle;
-        _replyContent = "";
-        _replyMediaAssetIds = [];
-    }
-
-    private async Task SubmitReplyAsync()
-    {
-        if (_replyingTo is null || string.IsNullOrWhiteSpace(_replyContent)) return;
-        _busy = true;
-        var reply = await PostApi.CreateReplyAsync(_replyingTo.Value, _replyContent, _replyMediaAssetIds);
-        if (reply is not null)
-        {
-            var parentIndex = _posts.FindIndex(p => p.PostId == _replyingTo.Value);
-            var ancestorIds = GetVisibleAncestorIds(_replyingTo.Value);
-            _posts = _posts
-                .Select(post => ancestorIds.Contains(post.PostId)
-                    ? post with { ReplyCount = post.ReplyCount + 1 }
-                    : post)
-                .ToList();
-
-            if (parentIndex >= 0)
-                _posts.Insert(parentIndex + 1, reply);
-
-            _replyingTo = null;
-            _replyTargetHandle = null;
-            _replyContent = "";
-            _replyMediaAssetIds = [];
-        }
-        _busy = false;
-    }
-
-    private HashSet<Guid> GetVisibleAncestorIds(Guid postId)
-    {
-        var ancestorIds = new HashSet<Guid>();
-        var currentPostId = postId;
-
-        while (ancestorIds.Add(currentPostId))
-        {
-            var current = _posts.FirstOrDefault(p => p.PostId == currentPostId);
-            if (current?.ParentPostId is null)
-                break;
-
-            currentPostId = current.ParentPostId.Value;
-        }
-
-        return ancestorIds;
+        Nav.NavigateTo($"/posts/{postId}");
     }
 
     private async Task OpenRepost(Guid postId)

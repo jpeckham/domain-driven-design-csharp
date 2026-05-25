@@ -5,7 +5,7 @@ namespace SocialDDD.Domain.Tests;
 public class ReplyComposerSourceTests
 {
     [Fact]
-    public void FeedReplyComposer_DoesNotPrefillEditableTextWithParentHandle()
+    public void FeedReplyAction_NavigatesToPostDetailInsteadOfShowingInlineComposer()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
@@ -14,12 +14,15 @@ public class ReplyComposerSourceTests
             "Pages",
             "Feed.razor"));
 
-        source.Should().Contain("Replying to @_replyTargetHandle");
-        source.Should().NotContain("_replyContent = post?.AuthorHandle");
+        source.Should().Contain("private void OpenReply(Guid postId)");
+        source.Should().Contain("Nav.NavigateTo($\"/posts/{postId}\")");
+        source.Should().NotContain("_replyingTo == post.PostId");
+        source.Should().NotContain("SubmitReplyAsync");
+        source.Should().NotContain("CreateReplyAsync(_replyingTo.Value");
     }
 
     [Fact]
-    public void FeedReplySubmission_IncrementsParentReplyCountOptimistically()
+    public void FeedPage_DoesNotOwnReplyComposerState()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
@@ -28,21 +31,12 @@ public class ReplyComposerSourceTests
             "Pages",
             "Feed.razor"));
 
-        source.Should().Contain("post with { ReplyCount = post.ReplyCount + 1 }");
-    }
-
-    [Fact]
-    public void FeedReplySubmission_IncrementsVisibleAncestorReplyCountsOptimistically()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "src",
-            "SocialDDD.Client",
-            "Pages",
-            "Feed.razor"));
-
-        source.Should().Contain("GetVisibleAncestorIds");
-        source.Should().Contain("ancestorIds.Contains(post.PostId)");
+        source.Should().NotContain("private Guid? _replyingTo");
+        source.Should().NotContain("private string _replyContent");
+        source.Should().NotContain("_replyMediaAssetIds");
+        source.Should().NotContain("ReplyContentMaxLength");
+        source.Should().NotContain("StoredReplyLength");
+        source.Should().NotContain("reply-target");
     }
 
     [Fact]

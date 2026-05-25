@@ -139,6 +139,41 @@ public sealed class PostSearchMongoIntegrationTests : IAsyncLifetime
         foundByMedia!.Id.Should().Be(post.Id);
     }
 
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task GetFeedAsync_RootOnly_HidesRepliesAndOrdersByLatestDescendantReply()
+    {
+        var repository = _provider.GetRequiredService<IPostRepository>();
+        var rootAuthor = await AddUserAsync("root_author");
+        var replyAuthor = await AddUserAsync("reply_author");
+
+        var firstRoot = Post.Create(rootAuthor.Id, new PostContent("first root"));
+        await repository.AddAsync(firstRoot);
+        await Task.Delay(10);
+
+        var secondRoot = Post.Create(rootAuthor.Id, new PostContent("second root"));
+        await repository.AddAsync(secondRoot);
+        await Task.Delay(10);
+
+        var reply = Post.CreateReply(
+            firstRoot.Id,
+            replyAuthor.Id,
+            replyAuthor.Handle,
+            new PostContent("latest reply"),
+            ancestorPostIds: [firstRoot.Id]);
+        await repository.AddAsync(reply);
+
+        var results = await repository.GetFeedAsync(
+            skip: 0,
+            limit: 10,
+            rootOnly: true,
+            excludedHandles: null,
+            includedHandles: null);
+
+        results.Select(p => p.Id).Should().Equal([firstRoot.Id, secondRoot.Id]);
+        results.Should().NotContain(p => p.Id == reply.Id);
+    }
+
     private async Task<User> AddUserAsync(string handle)
     {
         var user = User.RegisterImmediate(

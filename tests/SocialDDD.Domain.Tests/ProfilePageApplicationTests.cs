@@ -107,6 +107,7 @@ public class ProfilePageApplicationTests
         posts.Should().ContainSingle();
         posts[0].AuthorHandle.Should().Be("@cara");
         repository.LastExcludedHandles.Should().Contain(new Handle("bob"));
+        repository.LastRootOnly.Should().BeTrue();
     }
 
     [Fact]
@@ -157,6 +158,7 @@ public class ProfilePageApplicationTests
     {
         public int? LastLimit { get; private set; }
         public int? LastOffset { get; private set; }
+        public bool? LastRootOnly { get; private set; }
 
         public Task AddAsync(Post post, CancellationToken ct = default) => Task.CompletedTask;
         public Task<Post?> GetByIdAsync(PostId id, CancellationToken ct = default) => Task.FromResult(posts.FirstOrDefault(p => p.Id == id));
@@ -182,6 +184,7 @@ public class ProfilePageApplicationTests
             IReadOnlySet<Handle>? includedHandles = null,
             CancellationToken ct = default)
         {
+            LastRootOnly = rootOnly;
             LastExcludedHandles = excludedHandles ?? new HashSet<Handle>();
             var excluded = LastExcludedHandles;
             return Task.FromResult<IReadOnlyList<Post>>(posts
